@@ -5,6 +5,15 @@ import { companySizes, internshipTypes } from "@/features/applications/constants
 import { interviewResults, interviewRounds, interviewTagCategories } from "@/features/interviews/constants";
 import { planningEventSources, planningEventStatuses, planningEventTypes } from "@/features/planning/constants";
 import { studyCategories } from "@/features/study/constants";
+import {
+  optimizationMaterialKinds,
+  optimizationSuggestionStates,
+  optimizationTaskSources,
+  optimizationTaskStatuses,
+  resumeAssetParseStatuses,
+  resumeEntryCompleteness,
+  resumeEntryTypes,
+} from "@/features/resumes/constants";
 
 export const applications = sqliteTable("applications", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -167,6 +176,76 @@ export const interviewNoteTags = sqliteTable(
   }),
 );
 
+export const resumeAssets = sqliteTable(
+  "resume_assets",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    originalName: text("original_name").notNull(),
+    storageKey: text("storage_key").notNull(),
+    mimeType: text("mime_type").notNull(),
+    byteSize: integer("byte_size").notNull(),
+    extractedText: text("extracted_text").notNull().default(""),
+    parseStatus: text("parse_status", { enum: resumeAssetParseStatuses }).notNull().default("pending"),
+    parseError: text("parse_error"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({ storageKeyUnique: uniqueIndex("resume_assets_storage_key_unique").on(table.storageKey) }),
+);
+
+export const resumeEntries = sqliteTable("resume_entries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  type: text("type", { enum: resumeEntryTypes }).notNull(),
+  title: text("title").notNull(),
+  contentJson: text("content_json").notNull(),
+  tagsJson: text("tags_json").notNull().default("[]"),
+  completeness: text("completeness", { enum: resumeEntryCompleteness }).notNull().default("incomplete"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const resumeOptimizationTasks = sqliteTable("resume_optimization_tasks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  jdSource: text("jd_source", { enum: optimizationTaskSources }).notNull(),
+  jdImageStorageKey: text("jd_image_storage_key"),
+  jdText: text("jd_text").notNull().default(""),
+  targetRole: text("target_role").notNull(),
+  status: text("status", { enum: optimizationTaskStatuses }).notNull().default("draft"),
+  aiOutputJson: text("ai_output_json"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const resumeOptimizationMaterials = sqliteTable("resume_optimization_materials", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  taskId: integer("task_id").notNull().references(() => resumeOptimizationTasks.id, { onDelete: "cascade" }),
+  kind: text("kind", { enum: optimizationMaterialKinds }).notNull(),
+  resumeAssetId: integer("resume_asset_id").references(() => resumeAssets.id, { onDelete: "set null" }),
+  resumeEntryId: integer("resume_entry_id").references(() => resumeEntries.id, { onDelete: "set null" }),
+  snapshotJson: text("snapshot_json").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const resumeOptimizationSuggestions = sqliteTable("resume_optimization_suggestions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  taskId: integer("task_id").notNull().references(() => resumeOptimizationTasks.id, { onDelete: "cascade" }),
+  materialId: integer("material_id").notNull().references(() => resumeOptimizationMaterials.id, { onDelete: "cascade" }),
+  originalText: text("original_text").notNull(),
+  proposedText: text("proposed_text").notNull(),
+  rationale: text("rationale").notNull(),
+  state: text("state", { enum: optimizationSuggestionStates }).notNull().default("pending"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const resumeVersions = sqliteTable("resume_versions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  taskId: integer("task_id").notNull().references(() => resumeOptimizationTasks.id, { onDelete: "cascade" }),
+  acceptedContentJson: text("accepted_content_json").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
 
 export type Application = typeof applications.$inferSelect;
 export type NewApplication = typeof applications.$inferInsert;
@@ -179,5 +258,11 @@ export type InterviewTag = typeof interviewTags.$inferSelect;
 export type JournalEntry = typeof journalEntries.$inferSelect;
 export type StudyCheckin = typeof studyCheckins.$inferSelect;
 export type PlanningEvent = typeof planningEvents.$inferSelect;
+export type ResumeAsset = typeof resumeAssets.$inferSelect;
+export type ResumeEntry = typeof resumeEntries.$inferSelect;
+export type ResumeOptimizationTask = typeof resumeOptimizationTasks.$inferSelect;
+export type ResumeOptimizationMaterial = typeof resumeOptimizationMaterials.$inferSelect;
+export type ResumeOptimizationSuggestion = typeof resumeOptimizationSuggestions.$inferSelect;
+export type ResumeVersion = typeof resumeVersions.$inferSelect;
 
 
