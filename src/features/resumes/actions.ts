@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { resumeAssets, resumeEntries } from "@/db/schema";
 import { RESUME_ASSET_DIRECTORY, saveResumePdf } from "@/features/resumes/files";
+import { saveResumeAssetWithExtraction } from "@/features/resumes/asset-upload";
 import { extractPdfText } from "@/features/resumes/pdf";
 import { resumeEntrySchema, stringifyResumeEntryContent } from "@/features/resumes/schema";
 import { resolve } from "node:path";
@@ -52,29 +53,24 @@ export async function createResumeAssetAction(
   }
 
   try {
-    const saved = await saveResumePdf(file);
-    const extracted = await extractPdfText(resolve(RESUME_ASSET_DIRECTORY, saved.storageKey));
-    await db.insert(resumeAssets).values({
-      originalName: file.name,
-      storageKey: saved.storageKey,
-      mimeType: file.type,
-      byteSize: saved.byteSize,
-      extractedText: extracted.text,
-      parseStatus: extracted.error ? "failed" : "parsed",
-      parseError: extracted.error ?? null,
-      createdAt: now(),
-      updatedAt: now(),
+    const asset = await saveResumeAssetWithExtraction(file, {
+      savePdf: saveResumePdf,
+      extractText: extractPdfText,
+      toStoragePath: (storageKey) => resolve(RESUME_ASSET_DIRECTORY, storageKey),
+      insertAsset: async (values) => {
+        await db.insert(resumeAssets).values(values);
+      },
+      now,
     });
     revalidateResumeWorkspace();
     return {
       success: true,
-      message: extracted.error ? "PDF 已保存，但文本提取失败。" : "PDF 简历已保存。",
+      message: asset.parseStatus === "failed" ? "PDF 已保存，但文本提取失败。" : "PDF 简历已保存。",
     };
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : "上传失败，请重试。" };
   }
 }
-
 export async function createResumeEntryAction(
   _previousState: ResumeActionState = emptyState,
   formData: FormData,
