@@ -1,7 +1,10 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $url = "http://localhost:3000"
+$projectNodeRoot = "C:\Users\brddd\tools\node-v22.22.3-win-x64"
+$projectNodeExe = Join-Path $projectNodeRoot "node.exe"
+$projectNpmCmd = Join-Path $projectNodeRoot "npm.cmd"
 
 function Test-OwnSpaceServer {
   try {
@@ -21,7 +24,7 @@ function Invoke-NpmCommand {
   )
 
   Write-Host $Description -ForegroundColor Cyan
-  & npm.cmd @Arguments
+  & $projectNpmCmd @Arguments
   if ($LASTEXITCODE -ne 0) {
     throw "$Description failed. npm exit code: $LASTEXITCODE"
   }
@@ -88,11 +91,14 @@ function Stop-OwnSpaceServer {
 
 Set-Location -LiteralPath $projectRoot
 
-if (-not (Get-Command npm.cmd -ErrorAction SilentlyContinue)) {
-  Write-Host "Node.js was not found. Install Node.js 22 LTS, then double-click start-ownspace.cmd again." -ForegroundColor Yellow
+if (-not (Test-Path -LiteralPath $projectNodeExe) -or -not (Test-Path -LiteralPath $projectNpmCmd)) {
+  Write-Host "OwnSpace cannot find its project Node.js runtime at $projectNodeRoot." -ForegroundColor Yellow
+  Write-Host "Extract Node.js 22 LTS there, then double-click start-ownspace.cmd again." -ForegroundColor Yellow
   Read-Host "Press Enter to exit"
   exit 1
 }
+
+$env:Path = "$projectNodeRoot;$env:Path"
 
 try {
   $nodeModulesPath = Join-Path $projectRoot "node_modules"
@@ -128,7 +134,7 @@ try {
 }
 
 if (-not (Test-OwnSpaceServer)) {
-  $startCommand = "Set-Location -LiteralPath `"$projectRoot`"; npm.cmd run start"
+  $startCommand = "`$env:Path = `"$projectNodeRoot;`$env:Path`"; Set-Location -LiteralPath `"$projectRoot`"; & `"$projectNpmCmd`" run start"
   Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoExit", "-ExecutionPolicy", "Bypass", "-Command", $startCommand) -WorkingDirectory $projectRoot
 
   Write-Host "OwnSpace is starting..." -ForegroundColor Cyan
@@ -141,3 +147,5 @@ if (-not (Test-OwnSpaceServer)) {
 }
 
 Start-Process $url
+
+
