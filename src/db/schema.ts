@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { foreignKey, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { foreignKey, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { applicationStatuses } from "@/config/application-status";
 import { companySizes, internshipTypes } from "@/features/applications/constants";
 import { interviewResults, interviewRounds, interviewTagCategories } from "@/features/interviews/constants";
@@ -11,6 +11,9 @@ import {
   optimizationTaskSources,
   optimizationTaskStatuses,
   resumeAssetParseStatuses,
+  resumeCandidateDuplicateKinds,
+  resumeCandidateStates,
+  resumeEntryExtractionStatuses,
   resumeEntryCompleteness,
   resumeEntryTypes,
 } from "@/features/resumes/constants";
@@ -187,6 +190,9 @@ export const resumeAssets = sqliteTable(
     extractedText: text("extracted_text").notNull().default(""),
     parseStatus: text("parse_status", { enum: resumeAssetParseStatuses }).notNull().default("pending"),
     parseError: text("parse_error"),
+    entryExtractionStatus: text("entry_extraction_status", { enum: resumeEntryExtractionStatuses }).notNull().default("idle"),
+    entryExtractionError: text("entry_extraction_error"),
+    entryExtractedAt: text("entry_extracted_at"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
@@ -203,6 +209,30 @@ export const resumeEntries = sqliteTable("resume_entries", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const resumeEntryCandidates = sqliteTable(
+  "resume_entry_candidates",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    resumeAssetId: integer("resume_asset_id")
+      .notNull()
+      .references(() => resumeAssets.id, { onDelete: "cascade" }),
+    type: text("type", { enum: resumeEntryTypes }).notNull(),
+    title: text("title").notNull(),
+    contentJson: text("content_json").notNull(),
+    sourceExcerpt: text("source_excerpt").notNull(),
+    duplicateEntryId: integer("duplicate_entry_id")
+      .references(() => resumeEntries.id, { onDelete: "set null" }),
+    duplicateKind: text("duplicate_kind", { enum: resumeCandidateDuplicateKinds }).notNull().default("none"),
+    state: text("state", { enum: resumeCandidateStates }).notNull().default("pending"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    assetIndex: index("resume_entry_candidates_asset_id_idx").on(table.resumeAssetId),
+    stateIndex: index("resume_entry_candidates_state_idx").on(table.state),
+  }),
+);
 
 export const resumeOptimizationTasks = sqliteTable("resume_optimization_tasks", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -268,6 +298,7 @@ export type StudyCheckin = typeof studyCheckins.$inferSelect;
 export type PlanningEvent = typeof planningEvents.$inferSelect;
 export type ResumeAsset = typeof resumeAssets.$inferSelect;
 export type ResumeEntry = typeof resumeEntries.$inferSelect;
+export type ResumeEntryCandidate = typeof resumeEntryCandidates.$inferSelect;
 export type ResumeOptimizationTask = typeof resumeOptimizationTasks.$inferSelect;
 export type ResumeOptimizationMaterial = typeof resumeOptimizationMaterials.$inferSelect;
 export type ResumeOptimizationSuggestion = typeof resumeOptimizationSuggestions.$inferSelect;

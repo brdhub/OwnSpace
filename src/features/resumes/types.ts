@@ -1,6 +1,7 @@
 import type {
   ResumeAsset,
   ResumeEntry,
+  ResumeEntryCandidate,
   ResumeOptimizationMaterial,
   ResumeOptimizationSuggestion,
   ResumeOptimizationTask,
@@ -9,6 +10,7 @@ import type {
 
 export type ResumeAssetRecord = ResumeAsset;
 export type ResumeEntryRecord = ResumeEntry;
+export type ResumeEntryCandidateRecord = ResumeEntryCandidate;
 export type OptimizationTaskRecord = ResumeOptimizationTask;
 export type OptimizationMaterialRecord = ResumeOptimizationMaterial;
 export type OptimizationSuggestionRecord = ResumeOptimizationSuggestion;
