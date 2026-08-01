@@ -2,11 +2,14 @@
   "name": "ownspace",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.16.0 <21 || >=22.3.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "tsx --test src/features/resumes/schema.test.ts",
+    "test": "tsx --test",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "db:migrate": "node -e \"require('fs').mkdirSync('data',{recursive:true})\" && drizzle-kit migrate",

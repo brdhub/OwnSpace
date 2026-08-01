@@ -30,7 +30,7 @@ drizzle/0012_add_resume_module.sql
 drizzle/0013_add_feishu_job_sync.sql
 src/features/resumes/{constants,types,schema,actions,queries,files,pdf,ocr,ai,prompts,feishu}.ts
 src/features/resumes/components/{resume-workspace,resume-asset-list,resume-asset-upload-form,resume-entry-list,resume-entry-form,optimization-workspace,jd-input-form,material-selector,optimization-result}.tsx
-src/features/resumes/*.test.ts
+test/resumes/{schema,files,pdf,ocr,ai,feishu}.test.ts
 .env.example
 README.md
 项目工程约束.md
@@ -38,9 +38,9 @@ README.md
 
 ### Task 1: Set the allowed boundary and test harness
 
-**Files:** Modify package.json, .gitignore, 项目工程约束.md. Create .env.example, src/features/resumes/schema.ts, and src/features/resumes/schema.test.ts.
+**Files:** Modify package.json, .gitignore, 项目工程约束.md. Create .env.example, src/features/resumes/schema.ts, and test/resumes/schema.test.ts.
 
-**Interfaces:** Add npm run test as tsx --test "src/**/*.test.ts". Export resumeEntrySchema for profile, education, experience, project, and skill. Define empty-only DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, and DEEPSEEK_MODEL variables.
+**Interfaces:** Add npm run test as the cross-platform `tsx --test` auto-discovery command. All resume tests belong under test/resumes so Node test discovery includes them automatically. Export resumeEntrySchema for profile, education, experience, project, and skill. Define empty-only DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, and DEEPSEEK_MODEL variables.
 
 - [ ] **Step 1: Write the failing test.**
 
@@ -52,7 +52,7 @@ test("rejects a project entry without a title", () => {
 
 - [ ] **Step 2: Verify it fails.**
 
-Run: npx tsx --test src/features/resumes/schema.test.ts
+Run: npx tsx --test test/resumes/schema.test.ts
 
 Expected: FAIL because the schema does not exist.
 
@@ -77,7 +77,7 @@ Expected: all exit 0.
 - [ ] **Step 5: Commit.**
 
 ~~~bash
-git add package.json package-lock.json .gitignore .env.example 项目工程约束.md src/features/resumes/schema.ts src/features/resumes/schema.test.ts
+git add package.json package-lock.json .gitignore .env.example 项目工程约束.md src/features/resumes/schema.ts test/resumes/schema.test.ts
 git commit -m "chore: prepare resume module boundaries"
 ~~~
 
@@ -102,7 +102,7 @@ test("rejects an evidence-free suggestion", () => {
 
 - [ ] **Step 2: Verify failure.**
 
-Run: npx tsx --test src/features/resumes/schema.test.ts
+Run: npx tsx --test test/resumes/schema.test.ts
 
 Expected: FAIL because AI response validation is absent.
 
@@ -144,7 +144,7 @@ test("returns an error object for unreadable PDFs", async () => {
 
 - [ ] **Step 2: Verify failure.**
 
-Run: npx tsx --test src/features/resumes/files.test.ts src/features/resumes/pdf.test.ts
+Run: npx tsx --test test/resumes/files.test.ts test/resumes/pdf.test.ts
 
 Expected: FAIL because adapters do not exist.
 
@@ -184,7 +184,7 @@ test("requires reviewed JD text", () => {
 
 - [ ] **Step 2: Verify failure.**
 
-Run: npx tsx --test src/features/resumes/ocr.test.ts src/features/resumes/schema.test.ts
+Run: npx tsx --test test/resumes/ocr.test.ts test/resumes/schema.test.ts
 
 Expected: FAIL because OCR and confirmation validation are absent.
 
@@ -226,7 +226,7 @@ test("rejects an unsupported metric", () => {
 
 - [ ] **Step 2: Verify failure.**
 
-Run: npx tsx --test src/features/resumes/ai.test.ts
+Run: npx tsx --test test/resumes/ai.test.ts
 
 Expected: FAIL because the adapter is absent.
 
@@ -268,7 +268,7 @@ test("rejects every non-approved URL", () => {
 
 - [ ] **Step 2: Verify failure.**
 
-Run: npx tsx --test src/features/resumes/feishu.test.ts
+Run: npx tsx --test test/resumes/feishu.test.ts
 
 Expected: FAIL because adapter is absent.
 
