@@ -8,14 +8,19 @@ import { ResumeAssetList } from "@/features/resumes/components/resume-asset-list
 import { ResumeAssetUploadForm } from "@/features/resumes/components/resume-asset-upload-form";
 import { ResumeEntryForm } from "@/features/resumes/components/resume-entry-form";
 import { ResumeEntryList } from "@/features/resumes/components/resume-entry-list";
+import { ResumeCandidateList } from "@/features/resumes/components/resume-candidate-list";
 import type { ResumeEntryView, ResumeWorkspaceData } from "@/features/resumes/queries";
 
 type DialogKind = "asset" | "entry" | null;
 
-export function ResumeWorkspace({ assets, entries }: ResumeWorkspaceData) {
+export function ResumeWorkspace({ assets, entries, candidates }: ResumeWorkspaceData) {
   const router = useRouter();
   const [dialogKind, setDialogKind] = useState<DialogKind>(null);
   const [editingEntry, setEditingEntry] = useState<ResumeEntryView>();
+  const pendingCandidateCounts = candidates.reduce<Record<number, number>>((counts, candidate) => {
+    if (candidate.state === "pending") counts[candidate.resumeAssetId] = (counts[candidate.resumeAssetId] ?? 0) + 1;
+    return counts;
+  }, {});
 
   const closeDialog = useCallback(() => {
     setDialogKind(null);
@@ -41,7 +46,14 @@ export function ResumeWorkspace({ assets, entries }: ResumeWorkspaceData) {
               <FileUp className="h-4 w-4" />上传 PDF
             </Button>
           </div>
-          <ResumeAssetList assets={assets} />
+          <ResumeAssetList assets={assets} pendingCandidateCounts={pendingCandidateCounts} />
+        </section>
+        <section className="rounded-lg border border-border bg-card p-5 xl:col-span-2">
+          <div className="mb-4">
+            <h2 className="font-semibold text-foreground">AI 候选审核</h2>
+            <p className="mt-1 text-sm leading-6 text-muted-foreground">核对原文依据、编辑内容，再决定是否加入正式条目仓库。</p>
+          </div>
+          <ResumeCandidateList candidates={candidates} />
         </section>
         <section className="rounded-lg border border-border bg-card p-5">
           <div className="mb-4 flex items-start justify-between gap-4">

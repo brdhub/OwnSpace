@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   findExactResumeEntry,
   resumeEntryFingerprint,
+  type ResumeEntryFingerprintRecord,
 } from "../../src/features/resumes/dedupe";
 
 test("fingerprint ignores whitespace, case, and object key order", () => {
@@ -30,7 +31,7 @@ test("fingerprint changes for a meaningful type, title, or content difference", 
 });
 
 test("finds an exact formal entry and leaves similar content unmatched", () => {
-  const entries = [
+  const entries: ResumeEntryFingerprintRecord[] = [
     { id: 1, type: "project" as const, title: "Dashboard", content: { result: "Saved 20 hours" } },
     { id: 2, type: "skill" as const, title: "SQL", content: { level: "熟练" } },
   ];

@@ -37,6 +37,8 @@ export type DeepSeekConfig = {
   timeoutMs: number;
 };
 
+export type DeepSeekEnvironment = Readonly<Record<string, string | undefined>>;
+
 const providerEnvelopeSchema = z.object({
   choices: z.array(z.object({
     finish_reason: z.string(),
@@ -44,7 +46,7 @@ const providerEnvelopeSchema = z.object({
   })).min(1),
 });
 
-export function getDeepSeekConfig(env: NodeJS.ProcessEnv = process.env): DeepSeekConfig {
+export function getDeepSeekConfig(env: DeepSeekEnvironment = process.env): DeepSeekConfig {
   const apiKey = env.DEEPSEEK_API_KEY?.trim();
   if (!apiKey) {
     throw new DeepSeekError("missing_config", "尚未配置 DeepSeek API Key，请在本机 .env.local 中设置 DEEPSEEK_API_KEY。", false);
@@ -62,7 +64,7 @@ export function getDeepSeekConfig(env: NodeJS.ProcessEnv = process.env): DeepSee
 
 type DeepSeekDependencies = {
   fetch?: typeof fetch;
-  env?: NodeJS.ProcessEnv;
+  env?: DeepSeekEnvironment;
 };
 
 async function requestJson(

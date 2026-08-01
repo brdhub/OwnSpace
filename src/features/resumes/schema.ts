@@ -15,6 +15,15 @@ export const resumeEntrySchema = z.object({
   completeness: z.enum(resumeEntryCompleteness).default("incomplete"),
 });
 
+export const resumeAssetIdSchema = z.object({
+  id: z.coerce.number().int().positive(),
+});
+
+export const generateResumeCandidatesSchema = z.object({
+  assetId: z.coerce.number().int().positive(),
+  replacePending: z.enum(["true", "false"]).transform((value) => value === "true"),
+});
+
 export const optimizationTaskInputSchema = z.object({
   jdSource: z.enum(optimizationTaskSources),
   jdImageStorageKey: z.string().trim().min(1).max(512).nullable().optional(),
@@ -55,6 +64,24 @@ export type AiOptimizationResponse = z.infer<typeof aiOptimizationResponseSchema
 export const resumeEntryContentSchema = z.record(z.string().trim().max(4_000)).refine((content) => Object.keys(content).length <= 30);
 export const stringifyResumeEntryContent = (content: unknown) => JSON.stringify(resumeEntryContentSchema.parse(content));
 export const parseResumeEntryContent = (contentJson: string) => resumeEntryContentSchema.parse(JSON.parse(contentJson));
+
+export const acceptResumeCandidateSchema = z.object({
+  candidateId: z.coerce.number().int().positive(),
+  type: z.enum(resumeEntryTypes),
+  title: z.string().trim().min(1).max(120),
+  contentJson: z.string().transform((value, context) => {
+    try {
+      return JSON.parse(value);
+    } catch {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "候选条目内容格式无效。" });
+      return z.NEVER;
+    }
+  }).pipe(resumeEntryContentSchema),
+}).transform(({ contentJson, ...candidate }) => ({ ...candidate, content: contentJson }));
+
+export const resumeCandidateIdSchema = z.object({
+  candidateId: z.coerce.number().int().positive(),
+});
 
 const resumeAssetSnapshotSchema = z.object({
   kind: z.literal("asset"),
