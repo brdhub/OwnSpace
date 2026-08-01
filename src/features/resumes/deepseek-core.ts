@@ -127,18 +127,17 @@ export async function generateEntryCandidates(
   input: CandidatePromptInput,
   dependencies: DeepSeekDependencies = {},
 ): Promise<GeneratedCandidate[]> {
-  const raw = await requestJson(buildCandidatePrompt(input), dependencies);
-  const parsed = generatedCandidateResponseSchema.safeParse(raw);
-  if (!parsed.success) {
-    throw new DeepSeekError("invalid_response", "DeepSeek 返回的候选条目不符合要求，请重试。", true);
-  }
-
   const allowedIds = new Set(input.formalEntries.map((entry) => entry.id));
-  if (parsed.data.candidates.some((candidate) => candidate.similarEntryId !== null && !allowedIds.has(candidate.similarEntryId))) {
-    throw new DeepSeekError("invalid_response", "DeepSeek 返回了不存在的重复条目，请重试。", true);
+  const messages = buildCandidatePrompt(input);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const raw = await requestJson(messages, dependencies);
+    const parsed = generatedCandidateResponseSchema.safeParse(raw);
+    if (!parsed.success) continue;
+    if (parsed.data.candidates.some((candidate) => candidate.similarEntryId !== null && !allowedIds.has(candidate.similarEntryId))) continue;
+    return parsed.data.candidates;
   }
 
-  return parsed.data.candidates;
+  throw new DeepSeekError("invalid_response", "DeepSeek 连续返回了不符合要求的候选条目，请重试。", true);
 }
 
 export async function recommendEntriesForJd(

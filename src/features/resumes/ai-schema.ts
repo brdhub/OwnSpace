@@ -1,10 +1,15 @@
 import { z } from "zod";
 import { resumeEntryTypes } from "@/features/resumes/constants";
 
+const candidateContentValueSchema = z.union([
+  z.string().trim().min(1).max(4_000),
+  z.array(z.string().trim().min(1).max(1_000)).min(1).max(50),
+]).transform((value) => Array.isArray(value) ? value.join("\n") : value);
+
 export const generatedCandidateSchema = z.object({
   type: z.enum(resumeEntryTypes),
   title: z.string().trim().min(1).max(200),
-  content: z.record(z.string().trim().min(1).max(80), z.string().trim().min(1).max(4_000))
+  content: z.record(z.string().trim().min(1).max(80), candidateContentValueSchema)
     .refine((content) => Object.keys(content).length <= 30),
   sourceExcerpt: z.string().trim().min(1).max(2_000),
   similarEntryId: z.number().int().positive().nullable(),

@@ -74,3 +74,17 @@ test("rejects duplicate IDs and unsupported JD match levels", () => {
   assert.equal(duplicate.success, false);
   assert.equal(unsupported.success, false);
 });
+
+test("normalizes list-valued candidate content returned by DeepSeek", () => {
+  const result = generatedCandidateResponseSchema.parse({
+    candidates: [{
+      type: "education",
+      title: "硕士研究生",
+      content: { courses: ["机器学习", "数据库系统"] },
+      sourceExcerpt: "主修课程：机器学习、数据库系统",
+      similarEntryId: null,
+    }],
+  });
+
+  assert.deepEqual(result.candidates[0].content, { courses: "机器学习\n数据库系统" });
+});

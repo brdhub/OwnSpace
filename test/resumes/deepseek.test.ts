@@ -126,3 +126,37 @@ test("HTTP errors are retryable and do not expose provider bodies or secrets", a
     },
   );
 });
+
+test("candidate generation retries once when the provider returns invalid domain JSON", async () => {
+  let attempts = 0;
+  const fakeFetch: typeof fetch = async () => {
+    attempts += 1;
+    if (attempts === 1) {
+      return providerResponse(JSON.stringify({
+        candidates: [{
+          type: "project",
+          title: "数据看板",
+          content: { responsibility: "整理数据" },
+          sourceExcerpt: "负责整理数据",
+        }],
+      }));
+    }
+    return providerResponse(JSON.stringify({
+      candidates: [{
+        type: "project",
+        title: "数据看板",
+        content: { responsibility: "整理数据" },
+        sourceExcerpt: "负责整理数据",
+        similarEntryId: null,
+      }],
+    }));
+  };
+
+  const result = await generateEntryCandidates(
+    { extractedText: "负责整理数据", formalEntries: [] },
+    { fetch: fakeFetch, env },
+  );
+
+  assert.equal(attempts, 2);
+  assert.equal(result[0].title, "数据看板");
+});
