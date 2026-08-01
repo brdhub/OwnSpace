@@ -3,6 +3,7 @@
 .next-build
 node_modules
 data
+data/resume-assets/
 dist
 *.log
 .env*
