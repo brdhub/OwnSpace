@@ -32,3 +32,7 @@ test("rejects a material with both source references", () => {
 test("rejects caller-supplied suggestion task ownership", () => {
   assert.equal(optimizationSuggestionInputSchema.safeParse({ taskId: 2, materialId: 1, originalText: "Built the API.", proposedText: "Built the API.", rationale: "Matches the material." }).success, false);
 });
+test("rejects a material whose source ID differs from its snapshot ID", () => {
+  assert.equal(optimizationMaterialInputSchema.safeParse({ kind: "asset", resumeAssetId: 2, snapshot: { kind: "asset", asset: { id: 1, originalName: "resume.pdf", storageKey: "resume.pdf", mimeType: "application/pdf", byteSize: 1, extractedText: "resume" } } }).success, false);
+  assert.equal(optimizationMaterialInputSchema.safeParse({ kind: "entry", resumeEntryId: 2, snapshot: { kind: "entry", entry: { id: 1, type: "project", title: "Project", content: {}, tags: [], completeness: "complete" } } }).success, false);
+});

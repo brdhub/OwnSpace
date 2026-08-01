@@ -75,5 +75,9 @@ export const parseAcceptedVersionContent = (contentJson: string) => acceptedVers
 export const optimizationMaterialInputSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("asset"), resumeAssetId: z.coerce.number().int().positive(), resumeEntryId: z.never().optional(), snapshot: resumeAssetSnapshotSchema }).strict(),
   z.object({ kind: z.literal("entry"), resumeAssetId: z.never().optional(), resumeEntryId: z.coerce.number().int().positive(), snapshot: resumeEntrySnapshotSchema }).strict(),
-]);
+]).superRefine((value, ctx) => {
+  const sourceId = value.kind === "asset" ? value.resumeAssetId : value.resumeEntryId;
+  const snapshotId = value.kind === "asset" ? value.snapshot.asset.id : value.snapshot.entry.id;
+  if (sourceId !== snapshotId) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["snapshot"], message: "Material source and snapshot IDs must match." });
+});
 export const optimizationSuggestionInputSchema = z.object({ materialId: z.coerce.number().int().positive(), originalText: z.string().trim().min(1).max(4_000), proposedText: z.string().trim().min(1).max(4_000), rationale: z.string().trim().min(1).max(1_000) }).strict();
