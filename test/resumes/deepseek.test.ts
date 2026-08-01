@@ -1,0 +1,128 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  DeepSeekError,
+  generateEntryCandidates,
+  getDeepSeekConfig,
+  recommendEntriesForJd,
+} from "../../src/features/resumes/deepseek-core";
+
+const env = {
+  DEEPSEEK_API_KEY: "test-only-key",
+};
+
+function providerResponse(content: string, finishReason = "stop") {
+  return new Response(JSON.stringify({
+    id: "response-1",
+    object: "chat.completion",
+    created: 1,
+    model: "deepseek-v4-flash",
+    choices: [{
+      index: 0,
+      finish_reason: finishReason,
+      message: { role: "assistant", content, reasoning_content: null },
+      logprobs: null,
+    }],
+  }), { status: 200, headers: { "content-type": "application/json" } });
+}
+
+test("requires a server-side API key", () => {
+  assert.throws(
+    () => getDeepSeekConfig({}),
+    (error: unknown) => error instanceof DeepSeekError && error.code === "missing_config",
+  );
+});
+
+test("uses current official defaults and supports non-secret overrides", () => {
+  assert.deepEqual(getDeepSeekConfig(env), {
+    apiKey: "test-only-key",
+    baseUrl: "https://api.deepseek.com",
+    model: "deepseek-v4-flash",
+    timeoutMs: 30_000,
+  });
+  assert.deepEqual(getDeepSeekConfig({
+    ...env,
+    DEEPSEEK_BASE_URL: "https://deepseek.example/v1/",
+    DEEPSEEK_MODEL: "deepseek-v4-pro",
+    DEEPSEEK_TIMEOUT_MS: "45000",
+  }), {
+    apiKey: "test-only-key",
+    baseUrl: "https://deepseek.example/v1",
+    model: "deepseek-v4-pro",
+    timeoutMs: 45_000,
+  });
+});
+
+test("candidate generation sends a JSON-output request and returns validated candidates", async () => {
+  let capturedUrl = "";
+  let capturedInit: RequestInit | undefined;
+  const fakeFetch: typeof fetch = async (input, init) => {
+    capturedUrl = input.toString();
+    capturedInit = init;
+    return providerResponse(JSON.stringify({
+      candidates: [{
+        type: "project",
+        title: "数据看板",
+        content: { responsibility: "整理数据" },
+        sourceExcerpt: "负责整理数据",
+        similarEntryId: null,
+      }],
+    }));
+  };
+
+  const result = await generateEntryCandidates({ extractedText: "负责整理数据", formalEntries: [] }, { fetch: fakeFetch, env });
+  const headers = new Headers(capturedInit?.headers);
+  const body = JSON.parse(capturedInit?.body?.toString() ?? "{}");
+
+  assert.equal(result[0].title, "数据看板");
+  assert.equal(capturedUrl, "https://api.deepseek.com/chat/completions");
+  assert.equal(headers.get("authorization"), "Bearer test-only-key");
+  assert.deepEqual(body.response_format, { type: "json_object" });
+  assert.deepEqual(body.thinking, { type: "disabled" });
+  assert.equal(body.model, "deepseek-v4-flash");
+});
+
+test("JD recommendation rejects IDs outside the submitted formal entries", async () => {
+  const fakeFetch: typeof fetch = async () => providerResponse(JSON.stringify({
+    recommendations: [{ entryId: 99, level: "high", reason: "不存在" }],
+  }));
+
+  await assert.rejects(
+    recommendEntriesForJd({
+      targetRole: "产品经理",
+      jdText: "需要用户研究能力",
+      formalEntries: [{ id: 1, type: "experience", title: "实习", content: { duty: "用户研究" } }],
+    }, { fetch: fakeFetch, env }),
+    (error: unknown) => error instanceof DeepSeekError && error.code === "invalid_response",
+  );
+});
+
+test("rejects truncated and empty provider output", async () => {
+  const truncatedFetch: typeof fetch = async () => providerResponse("{}", "length");
+  const emptyFetch: typeof fetch = async () => providerResponse("");
+
+  await assert.rejects(
+    generateEntryCandidates({ extractedText: "text", formalEntries: [] }, { fetch: truncatedFetch, env }),
+    (error: unknown) => error instanceof DeepSeekError && error.code === "invalid_response",
+  );
+  await assert.rejects(
+    generateEntryCandidates({ extractedText: "text", formalEntries: [] }, { fetch: emptyFetch, env }),
+    (error: unknown) => error instanceof DeepSeekError && error.code === "invalid_response",
+  );
+});
+
+test("HTTP errors are retryable and do not expose provider bodies or secrets", async () => {
+  const fakeFetch: typeof fetch = async () => new Response("SECRET_PROVIDER_BODY", { status: 503 });
+
+  await assert.rejects(
+    generateEntryCandidates({ extractedText: "PRIVATE_RESUME_TEXT", formalEntries: [] }, { fetch: fakeFetch, env }),
+    (error: unknown) => {
+      assert.equal(error instanceof DeepSeekError, true);
+      assert.equal((error as DeepSeekError).code, "provider_error");
+      assert.equal((error as DeepSeekError).retryable, true);
+      assert.doesNotMatch((error as Error).message, /SECRET_PROVIDER_BODY|PRIVATE_RESUME_TEXT|test-only-key/);
+      return true;
+    },
+  );
+});
