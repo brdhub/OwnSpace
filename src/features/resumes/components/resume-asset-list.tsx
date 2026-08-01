@@ -1,0 +1,31 @@
+import { FileText } from "lucide-react";
+import type { ResumeAsset } from "@/db/schema";
+
+function formatBytes(byteSize: number) {
+  return byteSize < 1024 * 1024 ? `${Math.max(1, Math.round(byteSize / 1024))} KB` : `${(byteSize / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function ResumeAssetList({ assets }: { assets: ResumeAsset[] }) {
+  if (!assets.length) {
+    return <p className="rounded-md border border-dashed border-border px-4 py-8 text-sm leading-6 text-muted-foreground">还没有保存 PDF 简历。上传一份现有版本，就能在这里作为后续整理的原始资料。</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {assets.map((asset) => (
+        <article key={asset.id} className="rounded-md border border-border bg-background p-3">
+          <div className="flex gap-3">
+            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="truncate text-sm font-medium text-foreground">{asset.originalName}</h3>
+                <span className="shrink-0 text-xs text-muted-foreground">{formatBytes(asset.byteSize)}</span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">{asset.parseStatus === "parsed" ? "已提取文本" : asset.parseStatus === "failed" ? "文本提取失败，原文件已保留" : "等待提取"}</p>
+            </div>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
+}
