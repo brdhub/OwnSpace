@@ -1,0 +1,1 @@
+ALTER TABLE `internship_records` ADD `end_date` text;

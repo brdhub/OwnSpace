@@ -1,0 +1,10 @@
+.next
+.next-dev
+.next-build
+node_modules
+data
+dist
+*.log
+.env*
+*.tsbuildinfo
+.superpowers/
