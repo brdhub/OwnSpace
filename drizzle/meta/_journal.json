@@ -92,6 +92,13 @@
       "when": 1785580921870,
       "tag": "0012_add_resume_module",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1785584055237,
+      "tag": "0013_enforce_resume_integrity",
+      "breakpoints": true
     }
   ]
 }

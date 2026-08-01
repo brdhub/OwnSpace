@@ -51,3 +51,29 @@ export const aiOptimizationResponseSchema = z.object({
 export type ResumeEntryInput = z.infer<typeof resumeEntrySchema>;
 export type OptimizationTaskInput = z.infer<typeof optimizationTaskInputSchema>;
 export type AiOptimizationResponse = z.infer<typeof aiOptimizationResponseSchema>;
+
+export const resumeEntryContentSchema = z.record(z.string().trim().max(4_000)).refine((content) => Object.keys(content).length <= 30);
+export const stringifyResumeEntryContent = (content: unknown) => JSON.stringify(resumeEntryContentSchema.parse(content));
+export const parseResumeEntryContent = (contentJson: string) => resumeEntryContentSchema.parse(JSON.parse(contentJson));
+
+const resumeAssetSnapshotSchema = z.object({
+  kind: z.literal("asset"),
+  asset: z.object({ id: z.number().int().positive(), originalName: z.string().min(1), storageKey: z.string().min(1), mimeType: z.string().min(1), byteSize: z.number().int().nonnegative(), extractedText: z.string() }),
+});
+const resumeEntrySnapshotSchema = z.object({
+  kind: z.literal("entry"),
+  entry: z.object({ id: z.number().int().positive(), type: z.enum(resumeEntryTypes), title: z.string().min(1), content: resumeEntryContentSchema, tags: z.array(z.string()), completeness: z.enum(resumeEntryCompleteness) }),
+});
+export const resumeMaterialSnapshotSchema = z.discriminatedUnion("kind", [resumeAssetSnapshotSchema, resumeEntrySnapshotSchema]);
+export const stringifyResumeMaterialSnapshot = (snapshot: unknown) => JSON.stringify(resumeMaterialSnapshotSchema.parse(snapshot));
+export const parseResumeMaterialSnapshot = (snapshotJson: string) => resumeMaterialSnapshotSchema.parse(JSON.parse(snapshotJson));
+
+export const acceptedVersionContentSchema = z.object({ suggestions: z.array(z.object({ materialId: z.number().int().positive(), proposedText: z.string().trim().min(1).max(4_000) })).min(1) });
+export const stringifyAcceptedVersionContent = (content: unknown) => JSON.stringify(acceptedVersionContentSchema.parse(content));
+export const parseAcceptedVersionContent = (contentJson: string) => acceptedVersionContentSchema.parse(JSON.parse(contentJson));
+
+export const optimizationMaterialInputSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("asset"), resumeAssetId: z.coerce.number().int().positive(), resumeEntryId: z.never().optional(), snapshot: resumeAssetSnapshotSchema }).strict(),
+  z.object({ kind: z.literal("entry"), resumeAssetId: z.never().optional(), resumeEntryId: z.coerce.number().int().positive(), snapshot: resumeEntrySnapshotSchema }).strict(),
+]);
+export const optimizationSuggestionInputSchema = z.object({ materialId: z.coerce.number().int().positive(), originalText: z.string().trim().min(1).max(4_000), proposedText: z.string().trim().min(1).max(4_000), rationale: z.string().trim().min(1).max(1_000) }).strict();

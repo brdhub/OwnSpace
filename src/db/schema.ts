@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { foreignKey, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { applicationStatuses } from "@/config/application-status";
 import { companySizes, internshipTypes } from "@/features/applications/constants";
 import { interviewResults, interviewRounds, interviewTagCategories } from "@/features/interviews/constants";
@@ -216,28 +216,36 @@ export const resumeOptimizationTasks = sqliteTable("resume_optimization_tasks", 
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const resumeOptimizationMaterials = sqliteTable("resume_optimization_materials", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  taskId: integer("task_id").notNull().references(() => resumeOptimizationTasks.id, { onDelete: "cascade" }),
-  kind: text("kind", { enum: optimizationMaterialKinds }).notNull(),
-  resumeAssetId: integer("resume_asset_id").references(() => resumeAssets.id, { onDelete: "set null" }),
-  resumeEntryId: integer("resume_entry_id").references(() => resumeEntries.id, { onDelete: "set null" }),
-  snapshotJson: text("snapshot_json").notNull(),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+export const resumeOptimizationMaterials = sqliteTable(
+  "resume_optimization_materials",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    taskId: integer("task_id").notNull().references(() => resumeOptimizationTasks.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: optimizationMaterialKinds }).notNull(),
+    resumeAssetId: integer("resume_asset_id").references(() => resumeAssets.id, { onDelete: "set null" }),
+    resumeEntryId: integer("resume_entry_id").references(() => resumeEntries.id, { onDelete: "set null" }),
+    snapshotJson: text("snapshot_json").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({ taskOwnershipUnique: uniqueIndex("resume_optimization_materials_id_task_id_unique").on(table.id, table.taskId) }),
+);
 
-export const resumeOptimizationSuggestions = sqliteTable("resume_optimization_suggestions", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  taskId: integer("task_id").notNull().references(() => resumeOptimizationTasks.id, { onDelete: "cascade" }),
-  materialId: integer("material_id").notNull().references(() => resumeOptimizationMaterials.id, { onDelete: "cascade" }),
-  originalText: text("original_text").notNull(),
-  proposedText: text("proposed_text").notNull(),
-  rationale: text("rationale").notNull(),
-  state: text("state", { enum: optimizationSuggestionStates }).notNull().default("pending"),
-  sortOrder: integer("sort_order").notNull().default(0),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+export const resumeOptimizationSuggestions = sqliteTable(
+  "resume_optimization_suggestions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    taskId: integer("task_id").notNull().references(() => resumeOptimizationTasks.id, { onDelete: "cascade" }),
+    materialId: integer("material_id").notNull().references(() => resumeOptimizationMaterials.id, { onDelete: "cascade" }),
+    originalText: text("original_text").notNull(),
+    proposedText: text("proposed_text").notNull(),
+    rationale: text("rationale").notNull(),
+    state: text("state", { enum: optimizationSuggestionStates }).notNull().default("pending"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({ materialTaskOwnership: foreignKey({ columns: [table.materialId, table.taskId], foreignColumns: [resumeOptimizationMaterials.id, resumeOptimizationMaterials.taskId], name: "resume_optimization_suggestions_material_task_fk" }).onDelete("cascade") }),
+);
 
 export const resumeVersions = sqliteTable("resume_versions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
