@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import test from "node:test";
 
 import {
+  deleteResumePdf,
   MAX_RESUME_PDF_BYTES,
   RESUME_ASSET_DIRECTORY,
   saveResumePdf,
@@ -48,4 +49,16 @@ test("stores each accepted PDF under a unique .pdf key", async () => {
   } finally {
     await removeSavedFiles([first.storageKey, second.storageKey]);
   }
+});
+
+test("deletes a stored resume PDF", async () => {
+  const saved = await saveResumePdf(new File([validPdf], "resume.pdf", { type: "application/pdf" }));
+
+  await deleteResumePdf(saved.storageKey);
+
+  await assert.rejects(() => readFile(resolve(RESUME_ASSET_DIRECTORY, saved.storageKey)), /ENOENT/);
+});
+
+test("rejects an unsafe resume PDF storage key", async () => {
+  await assert.rejects(() => deleteResumePdf("../resume.pdf"), /storage key/);
 });

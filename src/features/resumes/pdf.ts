@@ -1,5 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { PDFParse } from "pdf-parse";
+import { getPath } from "pdf-parse/worker";
+
+PDFParse.setWorker(getPath());
 
 export type PdfTextExtractionResult = {
   text: string;

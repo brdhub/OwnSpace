@@ -1,6 +1,7 @@
 ﻿import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
+import { unlink } from "node:fs/promises";
 
 export const RESUME_ASSET_DIRECTORY = resolve(process.cwd(), "data", "resume-assets");
 export const MAX_RESUME_PDF_BYTES = 10 * 1024 * 1024;
@@ -42,4 +43,18 @@ export async function saveResumePdf(file: File): Promise<SavedResumePdf> {
   await writeFile(resolve(RESUME_ASSET_DIRECTORY, storageKey), buffer);
 
   return { storageKey, byteSize: file.size };
+}
+
+export async function deleteResumePdf(storageKey: string) {
+  if (!/^[0-9a-f-]+\.pdf$/i.test(storageKey)) {
+    throw new Error("Invalid resume PDF storage key.");
+  }
+
+  try {
+    await unlink(resolve(RESUME_ASSET_DIRECTORY, storageKey));
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
+      throw error;
+    }
+  }
 }

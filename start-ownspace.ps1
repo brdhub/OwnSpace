@@ -135,7 +135,8 @@ try {
 
 if (-not (Test-OwnSpaceServer)) {
   $startCommand = "`$env:Path = `"$projectNodeRoot;`$env:Path`"; Set-Location -LiteralPath `"$projectRoot`"; & `"$projectNpmCmd`" run start"
-  Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoExit", "-ExecutionPolicy", "Bypass", "-Command", $startCommand) -WorkingDirectory $projectRoot
+  $encodedStartCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($startCommand))
+  Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoExit", "-ExecutionPolicy", "Bypass", "-EncodedCommand", $encodedStartCommand) -WorkingDirectory $projectRoot
 
   Write-Host "OwnSpace is starting..." -ForegroundColor Cyan
   for ($attempt = 0; $attempt -lt 90; $attempt++) {
