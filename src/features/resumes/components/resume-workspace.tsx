@@ -9,14 +9,16 @@ import { ResumeAssetUploadForm } from "@/features/resumes/components/resume-asse
 import { ResumeEntryForm } from "@/features/resumes/components/resume-entry-form";
 import { ResumeEntryList } from "@/features/resumes/components/resume-entry-list";
 import { ResumeCandidateList } from "@/features/resumes/components/resume-candidate-list";
+import { JdMatchingWorkspace } from "@/features/resumes/components/jd-matching-workspace";
 import type { ResumeEntryView, ResumeWorkspaceData } from "@/features/resumes/queries";
 
 type DialogKind = "asset" | "entry" | null;
 
-export function ResumeWorkspace({ assets, entries, candidates }: ResumeWorkspaceData) {
+export function ResumeWorkspace({ assets, entries, candidates, jdTasks }: ResumeWorkspaceData) {
   const router = useRouter();
   const [dialogKind, setDialogKind] = useState<DialogKind>(null);
   const [editingEntry, setEditingEntry] = useState<ResumeEntryView>();
+  const [workspaceTab, setWorkspaceTab] = useState<"vault" | "jd">("vault");
   const pendingCandidateCounts = candidates.reduce<Record<number, number>>((counts, candidate) => {
     if (candidate.state === "pending") counts[candidate.resumeAssetId] = (counts[candidate.resumeAssetId] ?? 0) + 1;
     return counts;
@@ -35,7 +37,11 @@ export function ResumeWorkspace({ assets, entries, candidates }: ResumeWorkspace
 
   return (
     <>
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+      <div className="mb-5 flex gap-2 border-b border-border pb-3">
+        <Button type="button" size="sm" variant={workspaceTab === "vault" ? "default" : "ghost"} onClick={() => setWorkspaceTab("vault")}>简历仓库</Button>
+        <Button type="button" size="sm" variant={workspaceTab === "jd" ? "default" : "ghost"} onClick={() => setWorkspaceTab("jd")}>JD 匹配</Button>
+      </div>
+      {workspaceTab === "vault" ? <div className="grid gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
         <section className="rounded-lg border border-border bg-card p-5">
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
@@ -67,7 +73,7 @@ export function ResumeWorkspace({ assets, entries, candidates }: ResumeWorkspace
           </div>
           <ResumeEntryList entries={entries} onEdit={editEntry} />
         </section>
-      </div>
+      </div> : <JdMatchingWorkspace entries={entries} tasks={jdTasks} />}
 
       {dialogKind ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/20 px-4 py-8" role="presentation">

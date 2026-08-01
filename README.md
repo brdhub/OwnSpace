@@ -96,6 +96,17 @@ npm.cmd run db:clear
 
 AI 工具栏提供常用网页对话 AI 的快速入口，不需要 API Key。
 
+简历模块的 PDF 保存、本地文字提取、手动条目管理不需要 API Key。只有点击“生成结构化条目”或“AI 推荐条目”时才会调用 DeepSeek。使用前复制 `.env.example` 为 `.env.local`，并仅在本机填写新申请的 `DEEPSEEK_API_KEY`：
+
+```dotenv
+DEEPSEEK_API_KEY=
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-v4-flash
+DEEPSEEK_TIMEOUT_MS=30000
+```
+
+不要把密钥提交到 Git、写入数据库或粘贴到前端页面。任何曾在聊天、截图或可共享文件中暴露的密钥都应先在 DeepSeek 控制台轮换，再把新密钥写入 `.env.local`。
+
 ## 常用命令
 
 ```bash
@@ -106,7 +117,7 @@ npm run typecheck
 npm run build
 ```
 
-本项目不需要 API Key、登录账号、云数据库、第三方服务或 Docker。
+除可选的简历 AI 功能外，本项目不需要 API Key、登录账号、云数据库、第三方服务或 Docker。
 
 
 

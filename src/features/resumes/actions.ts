@@ -4,14 +4,15 @@ import { revalidatePath } from "next/cache";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { resumeAssets, resumeEntries } from "@/db/schema";
-import { RESUME_ASSET_DIRECTORY, saveResumePdf } from "@/features/resumes/files";
+import { deleteResumePdf, RESUME_ASSET_DIRECTORY, saveResumePdf } from "@/features/resumes/files";
 import { saveResumeAssetWithExtraction } from "@/features/resumes/asset-upload";
 import { extractPdfText } from "@/features/resumes/pdf";
-import { resumeEntrySchema, stringifyResumeEntryContent } from "@/features/resumes/schema";
+import { resumeAssetIdSchema, resumeEntrySchema, stringifyResumeEntryContent } from "@/features/resumes/schema";
 import { resolve } from "node:path";
 
 export type ResumeActionState = {
   success: boolean;
+  taskId?: number;
   message?: string;
   errors?: Record<string, string[]>;
 };
@@ -71,6 +72,27 @@ export async function createResumeAssetAction(
     return { success: false, message: error instanceof Error ? error.message : "上传失败，请重试。" };
   }
 }
+
+export async function deleteResumeAssetAction(formData: FormData) {
+  const parsed = resumeAssetIdSchema.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success) {
+    return;
+  }
+
+  const [asset] = await db
+    .select({ storageKey: resumeAssets.storageKey })
+    .from(resumeAssets)
+    .where(eq(resumeAssets.id, parsed.data.id))
+    .limit(1);
+  if (!asset) {
+    return;
+  }
+
+  await deleteResumePdf(asset.storageKey);
+  await db.delete(resumeAssets).where(eq(resumeAssets.id, parsed.data.id));
+  revalidateResumeWorkspace();
+}
+
 export async function createResumeEntryAction(
   _previousState: ResumeActionState = emptyState,
   formData: FormData,

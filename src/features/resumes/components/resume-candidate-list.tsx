@@ -75,7 +75,6 @@ function CandidateCard({ candidate }: { candidate: ResumeCandidateView }) {
             size="sm"
             variant="ghost"
             formAction={ignoreResumeCandidateAction}
-            onClick={() => window.setTimeout(() => router.refresh(), 0)}
           >
             忽略
           </Button>

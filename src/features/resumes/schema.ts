@@ -83,6 +83,29 @@ export const resumeCandidateIdSchema = z.object({
   candidateId: z.coerce.number().int().positive(),
 });
 
+export const runJdRecommendationSchema = z.object({
+  taskId: z.coerce.number().int().positive().optional(),
+  targetRole: z.string().trim().min(1).max(120),
+  jdText: z.string().trim().min(1).max(20_000),
+});
+
+const selectedEntryIdsJsonSchema = z.string().transform((value, context) => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "所选条目格式无效。" });
+    return z.NEVER;
+  }
+}).pipe(z.array(z.number().int().positive()).max(200)).refine(
+  (ids) => new Set(ids).size === ids.length,
+  "所选条目不能重复。",
+);
+
+export const saveJdSelectionSchema = z.object({
+  taskId: z.coerce.number().int().positive(),
+  selectedEntryIdsJson: selectedEntryIdsJsonSchema,
+}).transform(({ selectedEntryIdsJson, ...value }) => ({ ...value, selectedEntryIds: selectedEntryIdsJson }));
+
 const resumeAssetSnapshotSchema = z.object({
   kind: z.literal("asset"),
   asset: z.object({ id: z.number().int().positive(), originalName: z.string().min(1), storageKey: z.string().min(1), mimeType: z.string().min(1), byteSize: z.number().int().nonnegative(), extractedText: z.string() }),

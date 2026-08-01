@@ -5,6 +5,8 @@ import {
   aiOptimizationResponseSchema,
   acceptResumeCandidateSchema,
   generateResumeCandidatesSchema,
+  runJdRecommendationSchema,
+  saveJdSelectionSchema,
   optimizationMaterialInputSchema,
   optimizationSuggestionInputSchema,
   parseResumeEntryContent,
@@ -61,4 +63,16 @@ test("parses edited candidate structured content", () => {
   assert.equal(result.success, true);
   if (result.success) assert.deepEqual(result.data.content, { responsibility: "整理招聘漏斗数据" });
   assert.equal(acceptResumeCandidateSchema.safeParse({ candidateId: "2", type: "project", title: "数据看板", contentJson: "[]" }).success, false);
+});
+
+test("requires a target role and confirmed JD for AI recommendations", () => {
+  assert.equal(runJdRecommendationSchema.safeParse({ targetRole: "产品经理", jdText: "负责用户研究" }).success, true);
+  assert.equal(runJdRecommendationSchema.safeParse({ targetRole: "产品经理", jdText: "" }).success, false);
+});
+
+test("parses unique selected entry IDs", () => {
+  const result = saveJdSelectionSchema.safeParse({ taskId: "3", selectedEntryIdsJson: "[4,7]" });
+  assert.equal(result.success, true);
+  if (result.success) assert.deepEqual(result.data.selectedEntryIds, [4, 7]);
+  assert.equal(saveJdSelectionSchema.safeParse({ taskId: "3", selectedEntryIdsJson: "[4,4]" }).success, false);
 });
