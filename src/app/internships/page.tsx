@@ -35,7 +35,7 @@ export default async function InternshipsPage({ searchParams }: InternshipsPageP
   ]);
 
   return (
-    <PageContainer title="实习记录" description="留下在企业中学习、实践和成长的过程。">
+    <PageContainer title="实习记录">
       <InternshipWorkspace
         {...data}
         today={today}

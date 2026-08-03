@@ -5,7 +5,7 @@ import { aiToolGroups } from "@/config/ai-tools";
 
 export default function AiHubPage() {
   return (
-    <PageContainer title="AI 工具" description="把常用网页对话 AI 放在一个安静的入口里。">
+    <PageContainer title="AI 工具">
       <div className="space-y-6">
         {aiToolGroups.map((group) => (
           <section key={group.title} className="space-y-3">

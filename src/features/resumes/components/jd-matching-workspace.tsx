@@ -11,8 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ResumeActionState } from "@/features/resumes/actions";
 import { reconcileSelectedEntryIds } from "@/features/resumes/jd-selection";
 import {
+  runEntryDescriptionOptimizationAction,
   runJdRecommendationAction,
   saveJdMaterialSelectionAction,
+  updateOptimizationSuggestionStateAction,
 } from "@/features/resumes/optimization-actions";
 import type { JdTaskView, ResumeEntryView } from "@/features/resumes/queries";
 
@@ -30,6 +32,8 @@ export function JdMatchingWorkspace({ entries, tasks }: { entries: ResumeEntryVi
   ));
   const [runState, runAction, running] = useActionState(runJdRecommendationAction, initialState);
   const [saveState, saveAction, saving] = useActionState(saveJdMaterialSelectionAction, initialState);
+  const [optimizeState, optimizeAction, optimizing] = useActionState(runEntryDescriptionOptimizationAction, initialState);
+  const [suggestionState, suggestionAction, updatingSuggestion] = useActionState(updateOptimizationSuggestionStateAction, initialState);
 
   useEffect(() => {
     if (runState.taskId) {
@@ -40,6 +44,9 @@ export function JdMatchingWorkspace({ entries, tasks }: { entries: ResumeEntryVi
   useEffect(() => {
     if (saveState.success) router.refresh();
   }, [router, saveState]);
+  useEffect(() => {
+    if (optimizeState.success || suggestionState.success) router.refresh();
+  }, [optimizeState, router, suggestionState]);
   useEffect(() => {
     if (!activeTask) return;
     setTargetRole(activeTask.targetRole);
@@ -73,7 +80,6 @@ export function JdMatchingWorkspace({ entries, tasks }: { entries: ResumeEntryVi
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="font-semibold text-foreground">JD 匹配</h2>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">粘贴岗位描述，由 AI 从正式条目仓库中筛选素材。</p>
           </div>
           {tasks.length ? <Button type="button" size="sm" variant="outline" onClick={() => selectTask(null)}>新建匹配</Button> : null}
         </div>
@@ -106,12 +112,15 @@ export function JdMatchingWorkspace({ entries, tasks }: { entries: ResumeEntryVi
 
       <section className="rounded-lg border border-border bg-card p-5">
         <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h2 className="font-semibold text-foreground">推荐与选材</h2>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">高匹配条目默认选中，也可以手动增删其他正式条目。</p>
-          </div>
-          <Button type="button" size="sm" disabled title="后续开放">优化条目描述 · 后续开放</Button>
+          <h2 className="font-semibold text-foreground">推荐与选材</h2>
+          <form action={optimizeAction}>
+            <input type="hidden" name="taskId" value={activeTask?.id ?? ""} />
+            <Button type="submit" size="sm" disabled={optimizing || !activeTask?.selectedEntryIds.length}>
+              <Sparkles className="h-4 w-4" />{optimizing ? "正在优化…" : "优化条目描述"}
+            </Button>
+          </form>
         </div>
+        {optimizeState.message ? <p className={`mb-3 text-sm ${optimizeState.success ? "text-muted-foreground" : "text-destructive"}`}>{optimizeState.message}</p> : null}
         {activeTask?.status === "failed" ? <p className="mb-3 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{activeTask.error || "匹配失败，请保留当前输入并重试。"}</p> : null}
         {activeTask?.status === "processing" ? <p className="rounded-md border border-dashed border-border p-6 text-sm text-muted-foreground">AI 正在分析 JD 与正式条目…</p> : null}
         {activeTask?.status === "completed" ? (
@@ -151,6 +160,40 @@ export function JdMatchingWorkspace({ entries, tasks }: { entries: ResumeEntryVi
           <p className="rounded-md border border-dashed border-border p-6 text-sm text-muted-foreground">提交 JD 后，这里会显示 AI 匹配等级、理由和所有可手动选择的正式条目。</p>
         ) : null}
       </section>
+
+      {activeTask?.suggestions.length ? (
+        <section className="rounded-lg border border-border bg-card p-5 xl:col-span-2">
+          <h2 className="mb-4 font-semibold text-foreground">描述优化建议</h2>
+          <div className="space-y-3">
+            {activeTask.suggestions.map((suggestion) => (
+              <article key={suggestion.id} className="rounded-md border border-border bg-background p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="text-sm font-medium text-foreground">{suggestion.title}</h3>
+                  {suggestion.state === "pending" ? (
+                    <form action={suggestionAction} className="flex gap-2">
+                      <input type="hidden" name="suggestionId" value={suggestion.id} />
+                      <Button type="submit" name="state" value="ignored" size="sm" variant="ghost" disabled={updatingSuggestion}>忽略</Button>
+                      <Button type="submit" name="state" value="accepted" size="sm" variant="outline" disabled={updatingSuggestion}>接受</Button>
+                    </form>
+                  ) : <Badge variant={suggestion.state === "accepted" ? "secondary" : "outline"}>{suggestion.state === "accepted" ? "已接受" : "已忽略"}</Badge>}
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-md bg-muted/50 p-3">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">原描述</p>
+                    {Object.entries(suggestion.originalContent).map(([key, value]) => <p key={key} className="text-sm leading-6 text-muted-foreground"><span className="font-medium text-foreground">{key}：</span>{value || "—"}</p>)}
+                  </div>
+                  <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
+                    <p className="mb-2 text-xs font-medium text-muted-foreground">优化后</p>
+                    {Object.entries(suggestion.proposedContent).map(([key, value]) => <p key={key} className="text-sm leading-6 text-foreground"><span className="font-medium">{key}：</span>{value || "—"}</p>)}
+                  </div>
+                </div>
+                <p className="mt-3 text-xs leading-5 text-muted-foreground">{suggestion.rationale}</p>
+              </article>
+            ))}
+          </div>
+          {suggestionState.message ? <p className={`mt-3 text-sm ${suggestionState.success ? "text-muted-foreground" : "text-destructive"}`}>{suggestionState.message}</p> : null}
+        </section>
+      ) : null}
     </div>
   );
 }

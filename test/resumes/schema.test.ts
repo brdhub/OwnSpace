@@ -6,7 +6,9 @@ import {
   acceptResumeCandidateSchema,
   generateResumeCandidatesSchema,
   runJdRecommendationSchema,
+  runEntryOptimizationSchema,
   saveJdSelectionSchema,
+  updateOptimizationSuggestionStateSchema,
   optimizationMaterialInputSchema,
   optimizationSuggestionInputSchema,
   parseResumeEntryContent,
@@ -75,4 +77,14 @@ test("parses unique selected entry IDs", () => {
   assert.equal(result.success, true);
   if (result.success) assert.deepEqual(result.data.selectedEntryIds, [4, 7]);
   assert.equal(saveJdSelectionSchema.safeParse({ taskId: "3", selectedEntryIdsJson: "[4,4]" }).success, false);
+});
+
+test("validates description optimization task IDs", () => {
+  assert.equal(runEntryOptimizationSchema.safeParse({ taskId: "3" }).success, true);
+  assert.equal(runEntryOptimizationSchema.safeParse({ taskId: "0" }).success, false);
+});
+
+test("only accepts terminal optimization suggestion states", () => {
+  assert.equal(updateOptimizationSuggestionStateSchema.safeParse({ suggestionId: "2", state: "accepted" }).success, true);
+  assert.equal(updateOptimizationSuggestionStateSchema.safeParse({ suggestionId: "2", state: "pending" }).success, false);
 });

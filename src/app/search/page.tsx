@@ -14,7 +14,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const results = await searchOwnSpace(query);
 
   return (
-    <PageContainer title="搜索结果" description="在投递、面试、日记、学习和长期规划里快速找回线索。">
+    <PageContainer title="搜索结果">
       <SearchWorkspace query={query} results={results} />
     </PageContainer>
   );

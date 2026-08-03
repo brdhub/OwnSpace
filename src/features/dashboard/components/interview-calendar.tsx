@@ -119,7 +119,7 @@ export function InterviewCalendar({ events, activityDays }: InterviewCalendarPro
               const inMonth = day.getMonth() === visibleMonth.getMonth();
               const isToday = key === today;
               const isSelected = key === selectedDate;
-              const summary = `${activity?.hasJournal ? "已写日记" : "未写日记"}，学习 ${activity?.completedStudyCount ?? 0}/4`;
+              const summary = `${activity?.hasJournal ? "已写日记" : "未写日记"}，投递 ${activity?.applicationCount ?? 0} 份，学习 ${activity?.completedStudyCount ?? 0}/4`;
 
               return (
                 <div key={key} className="group relative aspect-square min-w-0">
@@ -146,8 +146,9 @@ export function InterviewCalendar({ events, activityDays }: InterviewCalendarPro
                       </span>
                     </span>
                     {dayEvents.length > 0 ? <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-sm bg-rose-500" aria-hidden="true" /> : null}
-                    <span className="absolute inset-x-1 bottom-1 grid grid-cols-2 gap-0.5" aria-hidden="true">
+                    <span className="absolute inset-x-1 bottom-1 grid grid-cols-3 gap-0.5" aria-hidden="true">
                       <span className={cn("h-1.5 rounded-[2px]", activity?.hasJournal ? "bg-amber-400" : "bg-muted")} />
+                      <span className={cn("h-1.5 rounded-[2px]", activity?.applicationCount ? "bg-sky-500" : "bg-muted")} />
                       <span className={cn("h-1.5 rounded-[2px]", studyColor(activity?.completedStudyCount ?? 0))} />
                     </span>
                   </button>
@@ -177,6 +178,7 @@ export function InterviewCalendar({ events, activityDays }: InterviewCalendarPro
 
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
             <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-[2px] bg-amber-400" />日记</span>
+            <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-[2px] bg-sky-500" />投递</span>
             <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-[2px] bg-rose-500" />面试</span>
             <span className="inline-flex items-center gap-1">
               学习
@@ -199,6 +201,9 @@ export function InterviewCalendar({ events, activityDays }: InterviewCalendarPro
             <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
               <span className={cn("rounded px-2 py-1", selectedActivity?.hasJournal ? "bg-amber-100 text-amber-800" : "bg-muted text-muted-foreground")}>
                 {selectedActivity?.hasJournal ? "已写日记" : "未写日记"}
+              </span>
+              <span className={cn("rounded px-2 py-1", selectedActivity?.applicationCount ? "bg-sky-100 text-sky-800" : "bg-muted text-muted-foreground")}>
+                {selectedActivity?.applicationCount ? `已投递 ${selectedActivity.applicationCount} 份` : "未投递"}
               </span>
             </div>
             {selectedEvents.length > 0 ? (

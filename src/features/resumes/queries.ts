@@ -1,19 +1,23 @@
 import "server-only";
 
-import { desc } from "drizzle-orm";
+import { asc, desc } from "drizzle-orm";
 import { db } from "@/db";
 import {
   resumeAssets,
   resumeEntries,
   resumeEntryCandidates,
   resumeOptimizationMaterials,
+  resumeOptimizationSuggestions,
   resumeOptimizationTasks,
   type ResumeAsset,
   type ResumeOptimizationTask,
 } from "@/db/schema";
 import { jdRecommendationResponseSchema, type JdRecommendation } from "@/features/resumes/ai-schema";
+import { hasCompleteRecommendationCoverage } from "@/features/resumes/jd-selection";
 import {
   parseResumeEntryContent,
+  parseResumeMaterialSnapshot,
+  resumeEntryContentSchema,
   type ResumeEntryInput,
 } from "@/features/resumes/schema";
 
@@ -37,9 +41,20 @@ export type JdTaskView = {
   status: ResumeOptimizationTask["status"];
   recommendations: JdRecommendation[];
   selectedEntryIds: number[];
+  suggestions: OptimizationSuggestionView[];
   error: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type OptimizationSuggestionView = {
+  id: number;
+  materialId: number;
+  title: string;
+  originalContent: Record<string, string>;
+  proposedContent: Record<string, string>;
+  rationale: string;
+  state: "pending" | "accepted" | "ignored";
 };
 
 export type ResumeCandidateView = {
@@ -66,22 +81,52 @@ function parseTags(tagsJson: string) {
   }
 }
 
+function parseSuggestionContent(contentJson: string) {
+  try {
+    return resumeEntryContentSchema.parse(JSON.parse(contentJson));
+  } catch {
+    return {};
+  }
+}
+
 export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {
-  const [assets, entries, candidates, jdTasks, optimizationMaterials] = await Promise.all([
+  const [assets, entries, candidates, jdTasks, optimizationMaterials, optimizationSuggestions] = await Promise.all([
     db.select().from(resumeAssets).orderBy(desc(resumeAssets.updatedAt)),
     db.select().from(resumeEntries).orderBy(desc(resumeEntries.updatedAt)),
     db.select().from(resumeEntryCandidates).orderBy(desc(resumeEntryCandidates.updatedAt)),
     db.select().from(resumeOptimizationTasks).orderBy(desc(resumeOptimizationTasks.updatedAt)),
     db.select().from(resumeOptimizationMaterials),
+    db.select().from(resumeOptimizationSuggestions).orderBy(asc(resumeOptimizationSuggestions.sortOrder)),
   ]);
 
   const entryTitleById = new Map(entries.map((entry) => [entry.id, entry.title]));
   const selectedEntryIdsByTask = new Map<number, number[]>();
+  const materialTitleById = new Map<number, string>();
   optimizationMaterials.forEach((material) => {
     if (material.kind !== "entry" || !material.resumeEntryId) return;
     const selected = selectedEntryIdsByTask.get(material.taskId) ?? [];
     selected.push(material.resumeEntryId);
     selectedEntryIdsByTask.set(material.taskId, selected);
+    try {
+      const snapshot = parseResumeMaterialSnapshot(material.snapshotJson);
+      if (snapshot.kind === "entry") materialTitleById.set(material.id, snapshot.entry.title);
+    } catch {
+      materialTitleById.set(material.id, "结构化条目");
+    }
+  });
+  const suggestionsByTask = new Map<number, OptimizationSuggestionView[]>();
+  optimizationSuggestions.forEach((suggestion) => {
+    const taskSuggestions = suggestionsByTask.get(suggestion.taskId) ?? [];
+    taskSuggestions.push({
+      id: suggestion.id,
+      materialId: suggestion.materialId,
+      title: materialTitleById.get(suggestion.materialId) ?? "结构化条目",
+      originalContent: parseSuggestionContent(suggestion.originalText),
+      proposedContent: parseSuggestionContent(suggestion.proposedText),
+      rationale: suggestion.rationale,
+      state: suggestion.state,
+    });
+    suggestionsByTask.set(suggestion.taskId, taskSuggestions);
   });
 
   return {
@@ -117,18 +162,22 @@ export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {
       } catch {
         rawOutput = null;
       }
-      const recommendations = jdRecommendationResponseSchema.safeParse(rawOutput);
-      const error = rawOutput && typeof rawOutput === "object" && "error" in rawOutput && typeof rawOutput.error === "string"
+      const parsedRecommendations = jdRecommendationResponseSchema.safeParse(rawOutput);
+      const recommendations = parsedRecommendations.success ? parsedRecommendations.data.recommendations : [];
+      const storedError = rawOutput && typeof rawOutput === "object" && "error" in rawOutput && typeof rawOutput.error === "string"
         ? rawOutput.error
         : null;
+      const incompleteResult = task.status === "completed"
+        && !hasCompleteRecommendationCoverage(recommendations, entries.map((entry) => entry.id));
       return {
         id: task.id,
         targetRole: task.targetRole,
         jdText: task.jdText,
-        status: task.status,
-        recommendations: recommendations.success ? recommendations.data.recommendations : [],
+        status: incompleteResult ? "failed" as const : task.status,
+        recommendations,
         selectedEntryIds: selectedEntryIdsByTask.get(task.id) ?? [],
-        error,
+        suggestions: suggestionsByTask.get(task.id) ?? [],
+        error: incompleteResult ? "此历史任务的匹配结果不完整，请重新运行 AI 推荐。" : storedError,
         createdAt: task.createdAt,
         updatedAt: task.updatedAt,
       };

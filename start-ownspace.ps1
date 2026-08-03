@@ -89,6 +89,8 @@ function Stop-OwnSpaceServer {
   }
 }
 
+. (Join-Path $projectRoot "start-ownspace-functions.ps1")
+
 Set-Location -LiteralPath $projectRoot
 
 if (-not (Test-Path -LiteralPath $projectNodeExe) -or -not (Test-Path -LiteralPath $projectNpmCmd)) {
@@ -115,7 +117,7 @@ try {
     )
 
   if ($dependenciesNeedInstall) {
-    Invoke-NpmCommand -Arguments @("ci") -Description "First launch: installing dependencies (internet required)..."
+    Install-OwnSpaceDependencies
   }
 
   Invoke-NpmCommand -Arguments @("run", "db:migrate") -Description "Checking the database schema..."
@@ -128,7 +130,7 @@ try {
   }
 } catch {
   Write-Host "`nOwnSpace setup failed: $($_.Exception.Message)" -ForegroundColor Red
-  Write-Host "Check the network connection and the error above, then try again." -ForegroundColor Yellow
+  Write-Host "Review the error above, close any OwnSpace development server if mentioned, then try again." -ForegroundColor Yellow
   Read-Host "Press Enter to exit"
   exit 1
 }

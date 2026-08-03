@@ -41,32 +41,25 @@ export function ResumeWorkspace({ assets, entries, candidates, jdTasks }: Resume
         <Button type="button" size="sm" variant={workspaceTab === "vault" ? "default" : "ghost"} onClick={() => setWorkspaceTab("vault")}>简历仓库</Button>
         <Button type="button" size="sm" variant={workspaceTab === "jd" ? "default" : "ghost"} onClick={() => setWorkspaceTab("jd")}>JD 匹配</Button>
       </div>
-      {workspaceTab === "vault" ? <div className="grid gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-        <section className="rounded-lg border border-border bg-card p-5">
+      {workspaceTab === "vault" ? <div className="grid gap-4 xl:grid-cols-2">
+        <section className="rounded-lg border border-border bg-card p-4">
           <div className="mb-4 flex items-start justify-between gap-4">
-            <div>
-              <h2 className="font-semibold text-foreground">PDF 原件</h2>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">保留每次投递前的本地版本。</p>
-            </div>
+            <h2 className="font-semibold text-foreground">PDF 原件</h2>
             <Button type="button" size="sm" onClick={() => setDialogKind("asset")}>
               <FileUp className="h-4 w-4" />上传 PDF
             </Button>
           </div>
           <ResumeAssetList assets={assets} pendingCandidateCounts={pendingCandidateCounts} />
         </section>
-        <section className="rounded-lg border border-border bg-card p-5 xl:col-span-2">
+        <section className="rounded-lg border border-border bg-card p-4">
           <div className="mb-4">
             <h2 className="font-semibold text-foreground">AI 候选审核</h2>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">核对原文依据、编辑内容，再决定是否加入正式条目仓库。</p>
           </div>
           <ResumeCandidateList candidates={candidates} />
         </section>
-        <section className="rounded-lg border border-border bg-card p-5">
+        <section className="rounded-lg border border-border bg-card p-4 xl:col-span-2">
           <div className="mb-4 flex items-start justify-between gap-4">
-            <div>
-              <h2 className="font-semibold text-foreground">结构化条目</h2>
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">将真实经历拆成可复用的小块，之后再按岗位选择。</p>
-            </div>
+            <h2 className="font-semibold text-foreground">结构化条目</h2>
             <Button type="button" size="sm" onClick={() => setDialogKind("entry")}>
               <Plus className="h-4 w-4" />添加条目
             </Button>

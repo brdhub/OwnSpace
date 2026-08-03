@@ -19,7 +19,7 @@ export default async function InterviewsPage({ searchParams }: InterviewsPagePro
   const [notes, options] = await Promise.all([getInterviewNotes(filters), getInterviewFormOptions()]);
 
   return (
-    <PageContainer title="面试" description="记录问题，也记录下一次会更好的地方。">
+    <PageContainer title="面试">
       <InterviewsWorkspace notes={notes} applications={options.applications} tags={options.tags} filters={filters} />
     </PageContainer>
   );

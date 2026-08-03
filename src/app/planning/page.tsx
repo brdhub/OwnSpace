@@ -9,7 +9,7 @@ export default async function PlanningPage() {
   const events = await getPlanningEvents();
 
   return (
-    <PageContainer title="长期规划" description="把秋招、春招、毕业和每天的小进展放到同一条时间线上。">
+    <PageContainer title="长期规划">
       <PlanningWorkspace events={events} today={toDateInputValue()} />
     </PageContainer>
   );

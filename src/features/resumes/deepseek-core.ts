@@ -1,16 +1,20 @@
 import { z } from "zod";
 import {
   generatedCandidateResponseSchema,
+  entryOptimizationResponseSchema,
+  type EntryOptimizationSuggestion,
   jdRecommendationResponseSchema,
   type GeneratedCandidate,
   type JdRecommendation,
 } from "@/features/resumes/ai-schema";
 import {
   buildCandidatePrompt,
+  buildEntryOptimizationPrompt,
   buildJdRecommendationPrompt,
   type CandidatePromptInput,
   type DeepSeekMessage,
   type JdPromptInput,
+  type OptimizationPromptInput,
 } from "@/features/resumes/prompts";
 
 export type DeepSeekErrorCode =
@@ -144,16 +148,54 @@ export async function recommendEntriesForJd(
   input: JdPromptInput,
   dependencies: DeepSeekDependencies = {},
 ): Promise<JdRecommendation[]> {
-  const raw = await requestJson(buildJdRecommendationPrompt(input), dependencies);
-  const parsed = jdRecommendationResponseSchema.safeParse(raw);
-  if (!parsed.success) {
-    throw new DeepSeekError("invalid_response", "DeepSeek 返回的 JD 推荐不符合要求，请重试。", true);
-  }
-
   const allowedIds = new Set(input.formalEntries.map((entry) => entry.id));
-  if (parsed.data.recommendations.some((recommendation) => !allowedIds.has(recommendation.entryId))) {
-    throw new DeepSeekError("invalid_response", "DeepSeek 返回了不存在的简历条目，请重试。", true);
+  const messages = buildJdRecommendationPrompt(input);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const raw = await requestJson(messages, dependencies);
+    const parsed = jdRecommendationResponseSchema.safeParse(raw);
+    if (!parsed.success) continue;
+
+    const returnedIds = new Set(parsed.data.recommendations.map((recommendation) => recommendation.entryId));
+    const coversEveryEntry = returnedIds.size === allowedIds.size
+      && [...allowedIds].every((entryId) => returnedIds.has(entryId));
+    if (!coversEveryEntry) continue;
+
+    return parsed.data.recommendations;
   }
 
-  return parsed.data.recommendations;
+  throw new DeepSeekError("invalid_response", "DeepSeek 连续返回了不完整的 JD 推荐，请重试。", true);
+}
+
+export async function optimizeEntriesForJd(
+  input: OptimizationPromptInput,
+  dependencies: DeepSeekDependencies = {},
+): Promise<EntryOptimizationSuggestion[]> {
+  const materialById = new Map(input.materials.map((material) => [material.materialId, material]));
+  const messages = buildEntryOptimizationPrompt(input);
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const raw = await requestJson(messages, dependencies);
+    const parsed = entryOptimizationResponseSchema.safeParse(raw);
+    if (!parsed.success) continue;
+
+    const returnedIds = new Set(parsed.data.suggestions.map((suggestion) => suggestion.materialId));
+    const coversEveryMaterial = returnedIds.size === materialById.size
+      && [...materialById.keys()].every((materialId) => returnedIds.has(materialId));
+    if (!coversEveryMaterial) continue;
+
+    const preservesStructure = parsed.data.suggestions.every((suggestion) => {
+      const original = materialById.get(suggestion.materialId);
+      if (!original) return false;
+      const originalKeys = Object.keys(original.content).sort();
+      const proposedKeys = Object.keys(suggestion.proposedContent).sort();
+      if (originalKeys.length !== proposedKeys.length
+        || originalKeys.some((key, index) => key !== proposedKeys[index])) return false;
+      return originalKeys.every((key) => original.content[key] !== "" || suggestion.proposedContent[key] === "");
+    });
+    if (!preservesStructure) continue;
+
+    return parsed.data.suggestions;
+  }
+
+  throw new DeepSeekError("invalid_response", "DeepSeek 连续返回了结构不完整的优化建议，请重试。", true);
 }

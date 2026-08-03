@@ -1,0 +1,29 @@
+export const appReleases = [
+  {
+    version: "2.1",
+    updatedAt: "2026年8月3日",
+    updatedAtIso: "2026-08-03",
+    notes: [
+      "简历仓库采用更紧凑的左右分栏布局。",
+      "JD 匹配增加完整性校验与稳定的默认选材。",
+      "开放针对 JD 的条目描述优化与建议审核。",
+      "修复 Windows 更新依赖时的文件占用问题。",
+      "历史更新日志支持点击外部或按 Esc 收起。",
+      "首页日历新增每日投递数量标记。",
+    ],
+  },
+  {
+    version: "2.0",
+    updatedAt: "2026年8月2日",
+    updatedAtIso: "2026-08-02",
+    notes: [
+      "新增简历 PDF 上传、文本解析与原件管理。",
+      "接入 DeepSeek 生成并审核结构化候选条目。",
+      "新增正式简历条目去重与 JD 匹配选材。",
+    ],
+  },
+] as const;
+
+export const appRelease = appReleases[0];
+export const appVersion = appRelease.version;
+export const appUpdatedAt = appRelease.updatedAt;

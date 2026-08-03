@@ -1,5 +1,8 @@
 import { db } from "@/db";
 import { applications, interviewNotes, journalEntries, studyCheckins } from "@/db/schema";
+import { buildCalendarActivityDays, type CalendarActivityDay } from "@/features/dashboard/calendar-activity";
+
+export type { CalendarActivityDay } from "@/features/dashboard/calendar-activity";
 
 export type CalendarInterviewEvent = {
   id: string;
@@ -10,40 +13,14 @@ export type CalendarInterviewEvent = {
   source: "application" | "interviewNote";
 };
 
-export type CalendarActivityDay = {
-  date: string;
-  hasJournal: boolean;
-  completedStudyCount: number;
-};
-
 export async function getCalendarActivityDays(): Promise<CalendarActivityDay[]> {
-  const [journalRows, studyRows] = await Promise.all([
+  const [journalRows, studyRows, applicationRows] = await Promise.all([
     db.select({ date: journalEntries.entryDate }).from(journalEntries),
     db.select({ date: studyCheckins.checkinDate, completed: studyCheckins.isCompleted }).from(studyCheckins),
+    db.select({ date: applications.appliedDate }).from(applications),
   ]);
 
-  const activityByDate = new Map<string, CalendarActivityDay>();
-  const getDay = (date: string) => {
-    const existing = activityByDate.get(date);
-    if (existing) return existing;
-
-    const day: CalendarActivityDay = {
-      date,
-      hasJournal: false,
-      completedStudyCount: 0,
-    };
-    activityByDate.set(date, day);
-    return day;
-  };
-
-  for (const journal of journalRows) {
-    getDay(journal.date).hasJournal = true;
-  }
-  for (const study of studyRows) {
-    if (study.completed) getDay(study.date).completedStudyCount += 1;
-  }
-
-  return Array.from(activityByDate.values()).sort((left, right) => left.date.localeCompare(right.date));
+  return buildCalendarActivityDays({ journals: journalRows, studyCheckins: studyRows, applications: applicationRows });
 }
 
 export async function getInterviewCalendarEvents(): Promise<CalendarInterviewEvent[]> {

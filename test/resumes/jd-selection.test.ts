@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   defaultSelectedEntryIds,
+  hasCompleteRecommendationCoverage,
   reconcileSelectedEntryIds,
 } from "../../src/features/resumes/jd-selection";
 
@@ -16,6 +17,27 @@ test("fresh recommendations select only high matches", () => {
   assert.deepEqual(defaultSelectedEntryIds(recommendations), [1]);
 });
 
+test("falls back to all medium matches when there are no high matches", () => {
+  assert.deepEqual(defaultSelectedEntryIds([
+    { entryId: 1, level: "low", reason: "弱相关" },
+    { entryId: 2, level: "medium", reason: "部分匹配" },
+    { entryId: 3, level: "medium", reason: "部分匹配" },
+  ]), [2, 3]);
+});
+
+test("selects the first low match when every entry is low", () => {
+  assert.deepEqual(defaultSelectedEntryIds([
+    { entryId: 5, level: "low", reason: "弱相关" },
+    { entryId: 6, level: "low", reason: "弱相关" },
+  ]), [5]);
+});
+
 test("saved selection wins and removes entries no longer in the result", () => {
   assert.deepEqual(reconcileSelectedEntryIds(recommendations, [2, 99]), [2]);
+});
+
+test("detects incomplete historical recommendation results", () => {
+  assert.equal(hasCompleteRecommendationCoverage(recommendations, [1, 2, 3]), true);
+  assert.equal(hasCompleteRecommendationCoverage(recommendations, [1, 2, 3, 4]), false);
+  assert.equal(hasCompleteRecommendationCoverage([], [1]), false);
 });

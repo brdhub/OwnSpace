@@ -18,6 +18,7 @@ $files = @(
   "postcss.config.mjs",
   "README.md",
   "start-ownspace.cmd",
+  "start-ownspace-functions.ps1",
   "start-ownspace.ps1",
   "tailwind.config.ts",
   "tsconfig.json"

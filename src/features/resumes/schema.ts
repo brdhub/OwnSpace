@@ -106,6 +106,15 @@ export const saveJdSelectionSchema = z.object({
   selectedEntryIdsJson: selectedEntryIdsJsonSchema,
 }).transform(({ selectedEntryIdsJson, ...value }) => ({ ...value, selectedEntryIds: selectedEntryIdsJson }));
 
+export const runEntryOptimizationSchema = z.object({
+  taskId: z.coerce.number().int().positive(),
+});
+
+export const updateOptimizationSuggestionStateSchema = z.object({
+  suggestionId: z.coerce.number().int().positive(),
+  state: z.enum(["accepted", "ignored"]),
+});
+
 const resumeAssetSnapshotSchema = z.object({
   kind: z.literal("asset"),
   asset: z.object({ id: z.number().int().positive(), originalName: z.string().min(1), storageKey: z.string().min(1), mimeType: z.string().min(1), byteSize: z.number().int().nonnegative(), extractedText: z.string() }),

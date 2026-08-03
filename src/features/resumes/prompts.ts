@@ -18,6 +18,12 @@ export type JdPromptInput = {
   formalEntries: FormalEntrySummary[];
 };
 
+export type OptimizationPromptInput = {
+  targetRole: string;
+  jdText: string;
+  materials: Array<Omit<FormalEntrySummary, "id"> & { materialId: number }>;
+};
+
 export type DeepSeekMessage = {
   role: "system" | "user";
   content: string;
@@ -52,6 +58,7 @@ export function buildJdRecommendationPrompt(input: JdPromptInput): DeepSeekMessa
       content: [
         "你是严谨的简历与 JD 匹配助手。只能从给定正式条目中推荐，不修改条目内容，也不得返回列表外的 ID。",
         "输出必须是合法 JSON，且只能包含 recommendations 数组。每项包含 entryId、level、reason。",
+        "必须逐一评估 formalEntries 中的每个条目，每个 ID 恰好返回一次；即使关联较弱也要返回 low，不能遗漏或添加条目。",
         "level 只能是 high、medium、low；reason 必须说明条目与 JD 的具体关联。",
         "示例 JSON：{\"recommendations\":[{\"entryId\":1,\"level\":\"high\",\"reason\":\"直接覆盖岗位要求\"}]}",
       ].join("\n"),
@@ -62,6 +69,30 @@ export function buildJdRecommendationPrompt(input: JdPromptInput): DeepSeekMessa
         targetRole: input.targetRole,
         jdText: input.jdText,
         formalEntries: input.formalEntries,
+      }),
+    },
+  ];
+}
+
+export function buildEntryOptimizationPrompt(input: OptimizationPromptInput): DeepSeekMessage[] {
+  return [
+    {
+      role: "system",
+      content: [
+        "你是严谨的中文简历描述优化助手。根据目标岗位与 JD，改善给定素材的表达，但必须完全保留原始事实边界。",
+        "不得新增或猜测数字、技术、职责、业务规模、结果、团队贡献或个人贡献；不得把团队成果写成个人成果。",
+        "必须逐一处理 materials 中的每项，每个 materialId 恰好返回一次，不得遗漏或添加 ID。",
+        "每项 proposedContent 必须保留原 content 的全部字段键，不能新增、删除或重命名字段；原值为空的字段必须保持为空。",
+        "输出必须是合法 JSON，且只能包含 suggestions 数组。每项包含 materialId、proposedContent、rationale。",
+        "示例 JSON：{\"suggestions\":[{\"materialId\":1,\"proposedContent\":{\"responsibility\":\"优化后的真实描述\"},\"rationale\":\"突出与 JD 相关的行动\"}]}",
+      ].join("\n"),
+    },
+    {
+      role: "user",
+      content: JSON.stringify({
+        targetRole: input.targetRole,
+        jdText: input.jdText,
+        materials: input.materials,
       }),
     },
   ];

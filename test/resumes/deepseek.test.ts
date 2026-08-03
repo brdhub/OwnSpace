@@ -5,6 +5,7 @@ import {
   DeepSeekError,
   generateEntryCandidates,
   getDeepSeekConfig,
+  optimizeEntriesForJd,
   recommendEntriesForJd,
 } from "../../src/features/resumes/deepseek-core";
 
@@ -96,6 +97,50 @@ test("JD recommendation rejects IDs outside the submitted formal entries", async
     }, { fetch: fakeFetch, env }),
     (error: unknown) => error instanceof DeepSeekError && error.code === "invalid_response",
   );
+});
+
+test("JD recommendation retries when the first response omits a formal entry", async () => {
+  let attempts = 0;
+  const fakeFetch: typeof fetch = async () => {
+    attempts += 1;
+    return providerResponse(JSON.stringify({ recommendations: attempts === 1
+      ? [{ entryId: 1, level: "high", reason: "直接相关" }]
+      : [
+        { entryId: 1, level: "high", reason: "直接相关" },
+        { entryId: 2, level: "medium", reason: "部分相关" },
+      ] }));
+  };
+
+  const result = await recommendEntriesForJd({
+    targetRole: "后端开发",
+    jdText: "负责服务端性能优化",
+    formalEntries: [
+      { id: 1, type: "experience", title: "后端实习", content: { description: "开发接口" } },
+      { id: 2, type: "project", title: "检索项目", content: { description: "优化查询" } },
+    ],
+  }, { fetch: fakeFetch, env });
+
+  assert.equal(attempts, 2);
+  assert.deepEqual(result.map((item) => item.entryId), [1, 2]);
+});
+
+test("entry optimization retries when proposed field keys differ from the snapshot", async () => {
+  let attempts = 0;
+  const fakeFetch: typeof fetch = async () => {
+    attempts += 1;
+    return providerResponse(JSON.stringify({ suggestions: attempts === 1
+      ? [{ materialId: 10, proposedContent: { summary: "优化内容" }, rationale: "突出结果" }]
+      : [{ materialId: 10, proposedContent: { responsibility: "优化内容", result: "" }, rationale: "突出行动与结果" }] }));
+  };
+
+  const result = await optimizeEntriesForJd({
+    targetRole: "后端开发",
+    jdText: "负责服务端性能优化",
+    materials: [{ materialId: 10, type: "project", title: "检索项目", content: { responsibility: "优化查询逻辑", result: "" } }],
+  }, { fetch: fakeFetch, env });
+
+  assert.equal(attempts, 2);
+  assert.deepEqual(result[0].proposedContent, { responsibility: "优化内容", result: "" });
 });
 
 test("rejects truncated and empty provider output", async () => {

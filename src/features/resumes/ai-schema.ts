@@ -41,6 +41,32 @@ export const jdRecommendationResponseSchema = z.object({
   });
 });
 
+export const entryOptimizationSuggestionSchema = z.object({
+  materialId: z.number().int().positive(),
+  proposedContent: z.record(
+    z.string().trim().min(1).max(80),
+    z.string().trim().max(4_000),
+  ).refine((content) => Object.keys(content).length <= 30),
+  rationale: z.string().trim().min(1).max(1_000),
+}).strict();
+
+export const entryOptimizationResponseSchema = z.object({
+  suggestions: z.array(entryOptimizationSuggestionSchema).max(200),
+}).strict().superRefine((value, context) => {
+  const seen = new Set<number>();
+  value.suggestions.forEach((suggestion, index) => {
+    if (seen.has(suggestion.materialId)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["suggestions", index, "materialId"],
+        message: "Suggestion material IDs must be unique.",
+      });
+    }
+    seen.add(suggestion.materialId);
+  });
+});
+
 export type GeneratedCandidate = z.infer<typeof generatedCandidateSchema>;
 export type JdRecommendation = z.infer<typeof jdRecommendationSchema>;
 export type JdRecommendationResponse = z.infer<typeof jdRecommendationResponseSchema>;
+export type EntryOptimizationSuggestion = z.infer<typeof entryOptimizationSuggestionSchema>;
