@@ -18,6 +18,8 @@ export async function syncRecruitmentOpportunitiesAction(
   _previousState: OpportunityActionState = initialState,
   _formData?: FormData,
 ): Promise<OpportunityActionState> {
+  void _previousState;
+  void _formData;
   try {
     const snapshot = await fetchFeishuOpportunities();
     const result = syncRecruitmentOpportunities(snapshot);
@@ -39,6 +41,7 @@ export async function favoriteOpportunityAction(
   _previousState: OpportunityActionState = initialState,
   formData: FormData,
 ): Promise<OpportunityActionState> {
+  void _previousState;
   const parsed = opportunityIdSchema.safeParse(Object.fromEntries(formData.entries()));
   if (!parsed.success) {
     return { success: false, message: "企业机会不存在，请刷新页面后重试。" };

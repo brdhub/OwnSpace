@@ -17,6 +17,19 @@ export type FeishuOpportunitySnapshot = {
   fetchedAt: string;
 };
 
+export type OpportunityApplicationDraft = {
+  opportunityId: number;
+  company: string;
+  role: string;
+  source: string;
+  status: "planned" | "applied";
+  internshipType: "autumn";
+  companySize: "medium" | "large";
+  appliedDate: string;
+  applicationUrl: string | null;
+  notes: string;
+};
+
 export type FeishuFieldOption = {
   id: string;
   name: string;
