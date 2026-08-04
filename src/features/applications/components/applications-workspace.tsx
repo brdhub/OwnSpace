@@ -15,6 +15,7 @@ import { applicationStatusMeta, applicationStatuses } from "@/config/application
 import type { Application } from "@/db/schema";
 import { deleteApplicationAction, updateApplicationStatusAction } from "@/features/applications/actions";
 import { ApplicationForm } from "@/features/applications/components/application-form";
+import { ApplicationsNavigation } from "@/features/applications/components/applications-navigation";
 import { ApplicationImageExport } from "@/features/applications/components/application-image-export";
 import { StatusBadge } from "@/features/applications/components/status-badge";
 import { companySizeMeta, internshipTypeMeta, internshipTypes } from "@/features/applications/constants";
@@ -162,6 +163,7 @@ export function ApplicationsWorkspace({
 
   return (
     <div className="space-y-5">
+      <ApplicationsNavigation />
       <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-end">
         <form onSubmit={handleSearch} className="flex-1 space-y-2">
           <Label htmlFor="application-search">搜索</Label>

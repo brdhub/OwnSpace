@@ -54,6 +54,7 @@ export async function createApplicationAction(
 
   revalidatePath("/");
   revalidatePath("/applications");
+  revalidatePath("/applications/opportunities");
   return { success: true, message: "投递记录已新增" };
 }
 
@@ -82,6 +83,7 @@ export async function updateApplicationAction(
 
   revalidatePath("/");
   revalidatePath("/applications");
+  revalidatePath("/applications/opportunities");
   return { success: true, message: "投递记录已更新" };
 }
 

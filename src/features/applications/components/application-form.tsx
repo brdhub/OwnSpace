@@ -15,8 +15,25 @@ import { toDateInputValue } from "@/lib/date";
 
 type ApplicationFormProps = {
   application?: Application;
+  initialValues?: ApplicationInitialValues;
   onDone: () => void;
 };
+
+export type ApplicationInitialValues = Partial<
+  Pick<
+    Application,
+    | "opportunityId"
+    | "company"
+    | "role"
+    | "source"
+    | "status"
+    | "internshipType"
+    | "companySize"
+    | "appliedDate"
+    | "applicationUrl"
+    | "notes"
+  >
+>;
 
 const initialState: ApplicationActionState = { success: false };
 
@@ -38,7 +55,7 @@ function SubmitButton({ label }: { label: string }) {
   );
 }
 
-export function ApplicationForm({ application, onDone }: ApplicationFormProps) {
+export function ApplicationForm({ application, initialValues, onDone }: ApplicationFormProps) {
   const action = application ? updateApplicationAction : createApplicationAction;
   const [state, formAction] = useActionState(action, initialState);
 
@@ -51,22 +68,23 @@ export function ApplicationForm({ application, onDone }: ApplicationFormProps) {
   return (
     <form action={formAction} className="space-y-4">
       {application ? <input type="hidden" name="id" value={application.id} /> : null}
+      {!application && initialValues?.opportunityId ? <input type="hidden" name="opportunityId" value={initialValues.opportunityId} /> : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="company">公司名称</Label>
-          <Input id="company" name="company" defaultValue={application?.company ?? ""} />
+          <Input id="company" name="company" defaultValue={application?.company ?? initialValues?.company ?? ""} />
           <FieldError errors={state.errors?.company} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="role">岗位名称</Label>
-          <Input id="role" name="role" defaultValue={application?.role ?? ""} />
+          <Input id="role" name="role" defaultValue={application?.role ?? initialValues?.role ?? ""} />
           <FieldError errors={state.errors?.role} />
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="internshipType">实习类型</Label>
-          <Select id="internshipType" name="internshipType" defaultValue={application?.internshipType ?? "daily"}>
+          <Select id="internshipType" name="internshipType" defaultValue={application?.internshipType ?? initialValues?.internshipType ?? "daily"}>
             {internshipTypes.map((type) => (
               <option key={type} value={type}>
                 {internshipTypeMeta[type].label}
@@ -77,7 +95,7 @@ export function ApplicationForm({ application, onDone }: ApplicationFormProps) {
         </div>
         <div className="space-y-2">
           <Label htmlFor="companySize">厂型</Label>
-          <Select id="companySize" name="companySize" defaultValue={application?.companySize ?? "medium"}>
+          <Select id="companySize" name="companySize" defaultValue={application?.companySize ?? initialValues?.companySize ?? "medium"}>
             {companySizes.map((size) => (
               <option key={size} value={size}>
                 {companySizeMeta[size].label}
@@ -90,12 +108,12 @@ export function ApplicationForm({ application, onDone }: ApplicationFormProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="source">投递渠道</Label>
-          <Input id="source" name="source" defaultValue={application?.source ?? ""} />
+          <Input id="source" name="source" defaultValue={application?.source ?? initialValues?.source ?? ""} />
           <FieldError errors={state.errors?.source} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="status">当前状态</Label>
-          <Select id="status" name="status" defaultValue={application?.status ?? "planned"}>
+          <Select id="status" name="status" defaultValue={application?.status ?? initialValues?.status ?? "planned"}>
             {applicationStatuses.map((status) => (
               <option key={status} value={status}>
                 {applicationStatusMeta[status].label}
@@ -108,7 +126,7 @@ export function ApplicationForm({ application, onDone }: ApplicationFormProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="appliedDate">投递日期</Label>
-          <Input id="appliedDate" name="appliedDate" type="date" defaultValue={application?.appliedDate ?? toDateInputValue()} />
+          <Input id="appliedDate" name="appliedDate" type="date" defaultValue={application?.appliedDate ?? initialValues?.appliedDate ?? toDateInputValue()} />
           <FieldError errors={state.errors?.appliedDate} />
         </div>
         <div className="space-y-2">
@@ -119,12 +137,12 @@ export function ApplicationForm({ application, onDone }: ApplicationFormProps) {
       </div>
       <div className="space-y-2">
         <Label htmlFor="applicationUrl">投递网址</Label>
-        <Input id="applicationUrl" name="applicationUrl" type="url" defaultValue={application?.applicationUrl ?? ""} />
+        <Input id="applicationUrl" name="applicationUrl" type="url" defaultValue={application?.applicationUrl ?? initialValues?.applicationUrl ?? ""} />
         <FieldError errors={state.errors?.applicationUrl} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="notes">备注</Label>
-        <Textarea id="notes" name="notes" defaultValue={application?.notes ?? ""} />
+        <Textarea id="notes" name="notes" defaultValue={application?.notes ?? initialValues?.notes ?? ""} />
         <FieldError errors={state.errors?.notes} />
       </div>
       {state.message && !state.success ? <p className="text-sm text-destructive">{state.message}</p> : null}
