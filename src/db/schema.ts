@@ -18,8 +18,34 @@ import {
   resumeEntryTypes,
 } from "@/features/resumes/constants";
 
+export const recruitmentOpportunities = sqliteTable(
+  "recruitment_opportunities",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    sourceRecordId: text("source_record_id").notNull(),
+    company: text("company").notNull(),
+    batch: text("batch").notNull().default(""),
+    sourceUpdatedDate: text("source_updated_date"),
+    companyType: text("company_type").notNull().default(""),
+    industry: text("industry").notNull().default(""),
+    roles: text("roles").notNull().default(""),
+    cities: text("cities").notNull().default(""),
+    unrestrictedMajor: integer("unrestricted_major", { mode: "boolean" }).notNull().default(false),
+    applicationUrl: text("application_url"),
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    syncedAt: text("synced_at").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    sourceRecordIdUnique: uniqueIndex("recruitment_opportunities_source_record_id_unique").on(table.sourceRecordId),
+    activeIndex: index("recruitment_opportunities_is_active_idx").on(table.isActive),
+  }),
+);
+
 export const applications = sqliteTable("applications", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  opportunityId: integer("opportunity_id").references(() => recruitmentOpportunities.id, { onDelete: "set null" }),
   company: text("company").notNull(),
   role: text("role").notNull(),
   source: text("source").notNull(),
@@ -287,6 +313,8 @@ export const resumeVersions = sqliteTable("resume_versions", {
 
 export type Application = typeof applications.$inferSelect;
 export type NewApplication = typeof applications.$inferInsert;
+export type RecruitmentOpportunity = typeof recruitmentOpportunities.$inferSelect;
+export type NewRecruitmentOpportunity = typeof recruitmentOpportunities.$inferInsert;
 export type DailyAction = typeof dailyActions.$inferSelect;
 export type InternshipRecord = typeof internshipRecords.$inferSelect;
 export type InternshipEntry = typeof internshipEntries.$inferSelect;
