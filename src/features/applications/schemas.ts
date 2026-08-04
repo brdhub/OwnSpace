@@ -3,6 +3,10 @@ import { applicationStatuses } from "@/config/application-status";
 import { companySizes, internshipTypes } from "@/features/applications/constants";
 
 export const applicationFormSchema = z.object({
+  opportunityId: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z.coerce.number().int().positive("企业机会不存在").optional(),
+  ),
   company: z.string().trim().min(1, "请输入公司名称").max(80, "公司名称不要超过 80 个字符"),
   role: z.string().trim().min(1, "请输入岗位名称").max(100, "岗位名称不要超过 100 个字符"),
   source: z.string().trim().min(1, "请输入投递渠道").max(80, "投递渠道不要超过 80 个字符"),
