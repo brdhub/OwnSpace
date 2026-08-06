@@ -1,8 +1,8 @@
 export const appReleases = [
   {
-    version: "1.2",
-    updatedAt: "2026年8月4日",
-    updatedAtIso: "2026-08-04",
+    version: "2.2",
+    updatedAt: "2026年8月6日",
+    updatedAtIso: "2026-08-06",
     notes: [
       "新增秋招企业入口，支持从指定飞书表格手动只读同步。",
       "支持按公司、岗位、企业类型、城市和专业限制筛选机会。",

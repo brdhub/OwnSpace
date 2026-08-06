@@ -8,9 +8,9 @@ test("release history keeps the current release first and every entry complete",
   assert.equal(appRelease, appReleases[0]);
   assert.deepEqual(
     appReleases.map((release) => release.version),
-    ["1.2", "2.1", "2.0"],
+    ["2.2", "2.1", "2.0"],
   );
-  assert.equal(appRelease.updatedAtIso, "2026-08-04");
+  assert.equal(appRelease.updatedAtIso, "2026-08-06");
   assert.equal(
     appReleases.every(
       (release) =>
