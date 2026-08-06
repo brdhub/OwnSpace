@@ -65,7 +65,8 @@ test("candidate generation sends a JSON-output request and returns validated can
       candidates: [{
         type: "project",
         title: "数据看板",
-        content: { responsibility: "整理数据" },
+        content: { projectCategory: "数据分析", techStack: ["SQL"], content: "整理数据" },
+        tags: ["数据分析"],
         sourceExcerpt: "负责整理数据",
         similarEntryId: null,
       }],
@@ -93,7 +94,7 @@ test("JD recommendation rejects IDs outside the submitted formal entries", async
     recommendEntriesForJd({
       targetRole: "产品经理",
       jdText: "需要用户研究能力",
-      formalEntries: [{ id: 1, type: "experience", title: "实习", content: { duty: "用户研究" } }],
+      formalEntries: [{ id: 1, type: "experience", title: "示例科技", content: { position: "产品实习生", techStack: [], responsibilities: "用户研究", workContent: "完成访谈" }, tags: ["用户研究"] }],
     }, { fetch: fakeFetch, env }),
     (error: unknown) => error instanceof DeepSeekError && error.code === "invalid_response",
   );
@@ -115,8 +116,8 @@ test("JD recommendation retries when the first response omits a formal entry", a
     targetRole: "后端开发",
     jdText: "负责服务端性能优化",
     formalEntries: [
-      { id: 1, type: "experience", title: "后端实习", content: { description: "开发接口" } },
-      { id: 2, type: "project", title: "检索项目", content: { description: "优化查询" } },
+      { id: 1, type: "experience", title: "示例科技", content: { position: "后端实习生", techStack: ["Java"], responsibilities: "开发接口", workContent: "维护服务" }, tags: ["后端"] },
+      { id: 2, type: "project", title: "检索项目", content: { projectCategory: "后端", techStack: ["Java"], content: "优化查询" }, tags: ["检索"] },
     ],
   }, { fetch: fakeFetch, env });
 
@@ -129,18 +130,41 @@ test("entry optimization retries when proposed field keys differ from the snapsh
   const fakeFetch: typeof fetch = async () => {
     attempts += 1;
     return providerResponse(JSON.stringify({ suggestions: attempts === 1
-      ? [{ materialId: 10, proposedContent: { summary: "优化内容" }, rationale: "突出结果" }]
-      : [{ materialId: 10, proposedContent: { responsibility: "优化内容", result: "" }, rationale: "突出行动与结果" }] }));
+      ? [{ materialId: 10, proposedContent: { award: "二等奖" }, rationale: "错误类型" }]
+      : [{ materialId: 10, proposedContent: { projectCategory: "后端", techStack: ["Java"], content: "优化查询逻辑" }, rationale: "突出行动与结果" }] }));
   };
 
   const result = await optimizeEntriesForJd({
     targetRole: "后端开发",
     jdText: "负责服务端性能优化",
-    materials: [{ materialId: 10, type: "project", title: "检索项目", content: { responsibility: "优化查询逻辑", result: "" } }],
+    materials: [{ materialId: 10, type: "project", title: "检索项目", content: { projectCategory: "后端", techStack: ["Java"], content: "优化查询" }, tags: ["检索"] }],
   }, { fetch: fakeFetch, env });
 
   assert.equal(attempts, 2);
-  assert.deepEqual(result[0].proposedContent, { responsibility: "优化内容", result: "" });
+  assert.deepEqual(result[0].proposedContent, { projectCategory: "后端", techStack: ["Java"], content: "优化查询逻辑" });
+});
+
+test("entry optimization rejects changes to factual metadata", async () => {
+  let attempts = 0;
+  const fakeFetch: typeof fetch = async () => {
+    attempts += 1;
+    return providerResponse(JSON.stringify({ suggestions: [{
+      materialId: 12,
+      proposedContent: attempts === 1
+        ? { proficiency: "精通", content: "能够开发服务" }
+        : { proficiency: "熟悉", content: "能够使用 Java 开发服务" },
+      rationale: "突出岗位相关能力",
+    }] }));
+  };
+
+  const result = await optimizeEntriesForJd({
+    targetRole: "后端开发",
+    jdText: "熟悉 Java",
+    materials: [{ materialId: 12, type: "skill", title: "Java", content: { proficiency: "熟悉", content: "能够开发服务" }, tags: ["Java"] }],
+  }, { fetch: fakeFetch, env });
+
+  assert.equal(attempts, 2);
+  assert.deepEqual(result[0].proposedContent, { proficiency: "熟悉", content: "能够使用 Java 开发服务" });
 });
 
 test("rejects truncated and empty provider output", async () => {
@@ -181,7 +205,8 @@ test("candidate generation retries once when the provider returns invalid domain
         candidates: [{
           type: "project",
           title: "数据看板",
-          content: { responsibility: "整理数据" },
+          content: { projectCategory: "数据分析", techStack: ["SQL"], content: "整理数据" },
+          tags: ["数据分析"],
           sourceExcerpt: "负责整理数据",
         }],
       }));
@@ -190,7 +215,8 @@ test("candidate generation retries once when the provider returns invalid domain
       candidates: [{
         type: "project",
         title: "数据看板",
-        content: { responsibility: "整理数据" },
+        content: { projectCategory: "数据分析", techStack: ["SQL"], content: "整理数据" },
+        tags: ["数据分析"],
         sourceExcerpt: "负责整理数据",
         similarEntryId: null,
       }],

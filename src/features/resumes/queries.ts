@@ -16,12 +16,13 @@ import { jdRecommendationResponseSchema, type JdRecommendation } from "@/feature
 import { hasCompleteRecommendationCoverage } from "@/features/resumes/jd-selection";
 import {
   parseResumeEntryContent,
+  parseResumeEntryTags,
   parseResumeMaterialSnapshot,
   resumeEntryContentSchema,
   type ResumeEntryInput,
 } from "@/features/resumes/schema";
 
-export type ResumeEntryView = Pick<ResumeEntryInput, "type" | "title" | "content" | "tags" | "completeness"> & {
+export type ResumeEntryView = Pick<ResumeEntryInput, "type" | "title" | "content" | "tags"> & {
   id: number;
   createdAt: string;
   updatedAt: string;
@@ -51,8 +52,8 @@ export type OptimizationSuggestionView = {
   id: number;
   materialId: number;
   title: string;
-  originalContent: Record<string, string>;
-  proposedContent: Record<string, string>;
+  originalContent: Record<string, string | string[]>;
+  proposedContent: Record<string, string | string[]>;
   rationale: string;
   state: "pending" | "accepted" | "ignored";
 };
@@ -62,7 +63,8 @@ export type ResumeCandidateView = {
   resumeAssetId: number;
   type: ResumeEntryInput["type"];
   title: string;
-  content: Record<string, string>;
+  content: ResumeEntryInput["content"];
+  tags: string[];
   sourceExcerpt: string;
   duplicateEntryId: number | null;
   duplicateEntryTitle: string | null;
@@ -72,18 +74,9 @@ export type ResumeCandidateView = {
   updatedAt: string;
 };
 
-function parseTags(tagsJson: string) {
-  try {
-    const tags = JSON.parse(tagsJson);
-    return Array.isArray(tags) && tags.every((tag) => typeof tag === "string") ? tags : [];
-  } catch {
-    return [];
-  }
-}
-
 function parseSuggestionContent(contentJson: string) {
   try {
-    return resumeEntryContentSchema.parse(JSON.parse(contentJson));
+    return resumeEntryContentSchema.parse(JSON.parse(contentJson)) as Record<string, string | string[]>;
   } catch {
     return {};
   }
@@ -136,8 +129,7 @@ export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {
       type: entry.type,
       title: entry.title,
       content: parseResumeEntryContent(entry.contentJson),
-      tags: parseTags(entry.tagsJson),
-      completeness: entry.completeness,
+      tags: parseResumeEntryTags(entry.tagsJson),
       createdAt: entry.createdAt,
       updatedAt: entry.updatedAt,
     })),
@@ -147,6 +139,7 @@ export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {
       type: candidate.type,
       title: candidate.title,
       content: parseResumeEntryContent(candidate.contentJson),
+      tags: parseResumeEntryTags(candidate.tagsJson),
       sourceExcerpt: candidate.sourceExcerpt,
       duplicateEntryId: candidate.duplicateEntryId,
       duplicateEntryTitle: candidate.duplicateEntryId ? entryTitleById.get(candidate.duplicateEntryId) ?? null : null,

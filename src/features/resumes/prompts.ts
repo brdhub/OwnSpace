@@ -1,10 +1,12 @@
 import type { ResumeEntryType } from "@/features/resumes/constants";
+import type { ResumeEntryContent } from "@/features/resumes/schema";
 
 export type FormalEntrySummary = {
   id: number;
   type: ResumeEntryType;
   title: string;
-  content: Record<string, string>;
+  content: ResumeEntryContent;
+  tags: string[];
 };
 
 export type CandidatePromptInput = {
@@ -35,10 +37,13 @@ export function buildCandidatePrompt(input: CandidatePromptInput): DeepSeekMessa
       role: "system",
       content: [
         "你是严谨的中文简历信息整理助手。只整理输入文本中明确存在的事实，不补写数字、职责、技能、结果或业务规模。",
-        "输出必须是合法 JSON，且只能包含 candidates 数组。每项必须包含 type、title、content、sourceExcerpt、similarEntryId。",
-        "type 只能是 profile、education、experience、project、skill。sourceExcerpt 必须逐字来自简历原文。",
+        "输出必须是合法 JSON，且只能包含 candidates 数组。每项必须包含 type、title、content、tags、sourceExcerpt、similarEntryId。",
+        "type 只能是 project、experience、education、skill、honor。sourceExcerpt 必须逐字来自简历原文。",
+        "project 的 content 只能包含 projectCategory、techStack 数组、content；experience 只能包含 position、techStack 数组、responsibilities、workContent。",
+        "education 的 content 只能包含 degree、major、dateRange、content；skill 只能包含 proficiency（了解、熟悉、熟练、精通）与 content；honor 只能包含 award。",
+        "project、experience、education 的 tags 根据原文概括；skill 的 tags 只放技能名称；honor 的 tags 为空数组。",
         "如与已有正式条目表达同一段经历，将 similarEntryId 设为对应 ID，否则设为 null。",
-        "示例 JSON：{\"candidates\":[{\"type\":\"project\",\"title\":\"项目名称\",\"content\":{\"responsibility\":\"原文事实\"},\"sourceExcerpt\":\"原文片段\",\"similarEntryId\":null}]}",
+        "示例 JSON：{\"candidates\":[{\"type\":\"project\",\"title\":\"项目名称\",\"content\":{\"projectCategory\":\"后端项目\",\"techStack\":[\"Java\"],\"content\":\"原文事实\"},\"tags\":[\"后端\"],\"sourceExcerpt\":\"原文片段\",\"similarEntryId\":null}]}",
       ].join("\n"),
     },
     {

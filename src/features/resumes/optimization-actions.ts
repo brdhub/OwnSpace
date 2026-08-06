@@ -14,6 +14,7 @@ import { optimizeEntriesForJd, recommendEntriesForJd } from "@/features/resumes/
 import {
   parseResumeMaterialSnapshot,
   parseResumeEntryContent,
+  parseResumeEntryTags,
   runEntryOptimizationSchema,
   runJdRecommendationSchema,
   saveJdSelectionSchema,
@@ -84,6 +85,7 @@ export async function runJdRecommendationAction(
         type: entry.type,
         title: entry.title,
         content: parseResumeEntryContent(entry.contentJson),
+        tags: parseResumeEntryTags(entry.tagsJson),
       })),
     });
     db.update(resumeOptimizationTasks).set({
@@ -134,13 +136,7 @@ export async function saveJdMaterialSelectionAction(
     if (parsed.data.selectedEntryIds.length) {
       transaction.insert(resumeOptimizationMaterials).values(parsed.data.selectedEntryIds.map((entryId) => {
         const entry = entryById.get(entryId)!;
-        let tags: string[] = [];
-        try {
-          const value = JSON.parse(entry.tagsJson);
-          if (Array.isArray(value) && value.every((tag) => typeof tag === "string")) tags = value;
-        } catch {
-          tags = [];
-        }
+        const tags = parseResumeEntryTags(entry.tagsJson);
         return {
           taskId: task.id,
           kind: "entry" as const,
@@ -153,7 +149,6 @@ export async function saveJdMaterialSelectionAction(
               title: entry.title,
               content: parseResumeEntryContent(entry.contentJson),
               tags,
-              completeness: entry.completeness,
             },
           }),
           createdAt: now(),
@@ -201,6 +196,7 @@ export async function runEntryDescriptionOptimizationAction(
         type: entry.type,
         title: entry.title,
         content: entry.content,
+        tags: entry.tags,
       })),
     });
     const originalByMaterialId = new Map(entries.map(({ material, entry }) => [material.id, entry.content]));

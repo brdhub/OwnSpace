@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
 import type { ResumeEntryType } from "@/features/resumes/constants";
+import type { ResumeEntryContent } from "@/features/resumes/schema";
 
 export type ResumeEntryFingerprintInput = {
   type: ResumeEntryType;
   title: string;
-  content: Record<string, string>;
+  content: ResumeEntryContent;
 };
 
 export type ResumeEntryFingerprintRecord = ResumeEntryFingerprintInput & {
@@ -15,11 +16,14 @@ function normalizeText(value: string) {
   return value.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("zh-CN");
 }
 
-function normalizeContent(content: Record<string, string>) {
+function normalizeContent(content: ResumeEntryContent) {
   return Object.fromEntries(
     Object.entries(content)
       .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, value]) => [normalizeText(key), normalizeText(value)]),
+      .map(([key, value]) => [
+        normalizeText(key),
+        Array.isArray(value) ? value.map(normalizeText) : normalizeText(value),
+      ]),
   );
 }
 

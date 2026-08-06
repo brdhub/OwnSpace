@@ -27,20 +27,39 @@ function revalidateResumeWorkspace() {
   revalidatePath("/resumes");
 }
 
-function entryPayload(formData: FormData) {
-  const content = formData.get("content")?.toString().trim() ?? "";
-  const tags = (formData.get("tags")?.toString() ?? "")
+function splitList(value: FormDataEntryValue | null) {
+  return (value?.toString() ?? "")
     .split(/[，,\n]/)
-    .map((tag) => tag.trim())
+    .map((item) => item.trim())
     .filter(Boolean);
+}
 
-  return {
-    type: formData.get("type"),
-    title: formData.get("title"),
-    content: content ? { description: content } : {},
-    tags,
-    completeness: formData.get("completeness"),
+function textValue(formData: FormData, name: string) {
+  return formData.get(name)?.toString().trim() ?? "";
+}
+
+function entryPayload(formData: FormData) {
+  const type = textValue(formData, "type");
+  const common = {
+    type,
+    title: textValue(formData, "title"),
+    tags: splitList(formData.get("tags")),
   };
+
+  switch (type) {
+    case "project":
+      return { ...common, content: { projectCategory: textValue(formData, "projectCategory"), techStack: splitList(formData.get("techStack")), content: textValue(formData, "content") } };
+    case "experience":
+      return { ...common, content: { position: textValue(formData, "position"), techStack: splitList(formData.get("techStack")), responsibilities: textValue(formData, "responsibilities"), workContent: textValue(formData, "workContent") } };
+    case "education":
+      return { ...common, content: { degree: textValue(formData, "degree"), major: textValue(formData, "major"), dateRange: textValue(formData, "dateRange"), content: textValue(formData, "content") } };
+    case "skill":
+      return { ...common, content: { proficiency: textValue(formData, "proficiency"), content: textValue(formData, "content") } };
+    case "honor":
+      return { ...common, content: { award: textValue(formData, "award") } };
+    default:
+      return { ...common, content: {} };
+  }
 }
 
 export async function createResumeAssetAction(
@@ -108,7 +127,6 @@ export async function createResumeEntryAction(
     title: parsed.data.title,
     contentJson: stringifyResumeEntryContent(parsed.data.content),
     tagsJson: JSON.stringify(parsed.data.tags),
-    completeness: parsed.data.completeness,
     createdAt: now(),
     updatedAt: now(),
   });
@@ -135,7 +153,6 @@ export async function updateResumeEntryAction(
     title: parsed.data.title,
     contentJson: stringifyResumeEntryContent(parsed.data.content),
     tagsJson: JSON.stringify(parsed.data.tags),
-    completeness: parsed.data.completeness,
     updatedAt: now(),
   }).where(eq(resumeEntries.id, id));
   revalidateResumeWorkspace();

@@ -14,7 +14,6 @@ import {
   resumeCandidateDuplicateKinds,
   resumeCandidateStates,
   resumeEntryExtractionStatuses,
-  resumeEntryCompleteness,
   resumeEntryTypes,
 } from "@/features/resumes/constants";
 
@@ -231,7 +230,6 @@ export const resumeEntries = sqliteTable("resume_entries", {
   title: text("title").notNull(),
   contentJson: text("content_json").notNull(),
   tagsJson: text("tags_json").notNull().default("[]"),
-  completeness: text("completeness", { enum: resumeEntryCompleteness }).notNull().default("incomplete"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
@@ -246,6 +244,7 @@ export const resumeEntryCandidates = sqliteTable(
     type: text("type", { enum: resumeEntryTypes }).notNull(),
     title: text("title").notNull(),
     contentJson: text("content_json").notNull(),
+    tagsJson: text("tags_json").notNull().default("[]"),
     sourceExcerpt: text("source_excerpt").notNull(),
     duplicateEntryId: integer("duplicate_entry_id")
       .references(() => resumeEntries.id, { onDelete: "set null" }),

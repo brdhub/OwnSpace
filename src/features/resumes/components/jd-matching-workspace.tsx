@@ -18,6 +18,10 @@ import {
 } from "@/features/resumes/optimization-actions";
 import type { JdTaskView, ResumeEntryView } from "@/features/resumes/queries";
 
+function formatContentValue(value: string | string[]) {
+  return Array.isArray(value) ? value.join("、") : value || "—";
+}
+
 const initialState: ResumeActionState = { success: false };
 const levelLabels = { high: "高匹配", medium: "中匹配", low: "低匹配" } as const;
 
@@ -180,11 +184,11 @@ export function JdMatchingWorkspace({ entries, tasks }: { entries: ResumeEntryVi
                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                   <div className="rounded-md bg-muted/50 p-3">
                     <p className="mb-2 text-xs font-medium text-muted-foreground">原描述</p>
-                    {Object.entries(suggestion.originalContent).map(([key, value]) => <p key={key} className="text-sm leading-6 text-muted-foreground"><span className="font-medium text-foreground">{key}：</span>{value || "—"}</p>)}
+                    {Object.entries(suggestion.originalContent).map(([key, value]) => <p key={key} className="text-sm leading-6 text-muted-foreground"><span className="font-medium text-foreground">{key}：</span>{formatContentValue(value)}</p>)}
                   </div>
                   <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
                     <p className="mb-2 text-xs font-medium text-muted-foreground">优化后</p>
-                    {Object.entries(suggestion.proposedContent).map(([key, value]) => <p key={key} className="text-sm leading-6 text-foreground"><span className="font-medium">{key}：</span>{value || "—"}</p>)}
+                    {Object.entries(suggestion.proposedContent).map(([key, value]) => <p key={key} className="text-sm leading-6 text-foreground"><span className="font-medium">{key}：</span>{formatContentValue(value)}</p>)}
                   </div>
                 </div>
                 <p className="mt-3 text-xs leading-5 text-muted-foreground">{suggestion.rationale}</p>

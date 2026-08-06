@@ -1,23 +1,35 @@
 import { z } from "zod";
-import { resumeEntryTypes } from "@/features/resumes/constants";
+import {
+  educationEntryContentSchema,
+  experienceEntryContentSchema,
+  honorEntryContentSchema,
+  projectEntryContentSchema,
+  resumeEntryContentSchema,
+  skillTitleSchema,
+  skillEntryContentSchema,
+} from "@/features/resumes/schema";
 
-const candidateContentValueSchema = z.union([
-  z.string().trim().min(1).max(4_000),
-  z.array(z.string().trim().min(1).max(1_000)).min(1).max(50),
-]).transform((value) => Array.isArray(value) ? value.join("\n") : value);
-
-export const generatedCandidateSchema = z.object({
-  type: z.enum(resumeEntryTypes),
-  title: z.string().trim().min(1).max(200),
-  content: z.record(z.string().trim().min(1).max(80), candidateContentValueSchema)
-    .refine((content) => Object.keys(content).length <= 30),
+const candidateFields = {
+  title: z.string().trim().min(1).max(120),
+  tags: z.array(z.string().trim().min(1).max(40)).max(12),
   sourceExcerpt: z.string().trim().min(1).max(2_000),
   similarEntryId: z.number().int().positive().nullable(),
-}).strict();
+};
+
+export const generatedCandidateSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("project"), ...candidateFields, content: projectEntryContentSchema.strip() }).strip(),
+  z.object({ type: z.literal("experience"), ...candidateFields, content: experienceEntryContentSchema.strip() }).strip(),
+  z.object({ type: z.literal("education"), ...candidateFields, content: educationEntryContentSchema.strip() }).strip(),
+  z.object({ type: z.literal("skill"), ...candidateFields, title: skillTitleSchema, content: skillEntryContentSchema.strip() }).strip(),
+  z.object({ type: z.literal("honor"), ...candidateFields, content: honorEntryContentSchema.strip() }).strip(),
+]).transform((candidate) => ({
+  ...candidate,
+  tags: candidate.type === "skill" ? [candidate.title] : candidate.type === "honor" ? [] : [...new Set(candidate.tags)],
+}));
 
 export const generatedCandidateResponseSchema = z.object({
   candidates: z.array(generatedCandidateSchema).max(100),
-}).strict();
+}).strip();
 
 export const jdRecommendationSchema = z.object({
   entryId: z.number().int().positive(),
@@ -43,10 +55,7 @@ export const jdRecommendationResponseSchema = z.object({
 
 export const entryOptimizationSuggestionSchema = z.object({
   materialId: z.number().int().positive(),
-  proposedContent: z.record(
-    z.string().trim().min(1).max(80),
-    z.string().trim().max(4_000),
-  ).refine((content) => Object.keys(content).length <= 30),
+  proposedContent: resumeEntryContentSchema,
   rationale: z.string().trim().min(1).max(1_000),
 }).strict();
 

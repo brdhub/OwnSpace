@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ResumeAssetList } from "@/features/resumes/components/resume-asset-list";
 import { ResumeAssetUploadForm } from "@/features/resumes/components/resume-asset-upload-form";
+import { ResumeEntryDetail } from "@/features/resumes/components/resume-entry-detail";
 import { ResumeEntryForm } from "@/features/resumes/components/resume-entry-form";
 import { ResumeEntryList } from "@/features/resumes/components/resume-entry-list";
 import { ResumeCandidateList } from "@/features/resumes/components/resume-candidate-list";
@@ -18,6 +19,7 @@ export function ResumeWorkspace({ assets, entries, candidates, jdTasks }: Resume
   const router = useRouter();
   const [dialogKind, setDialogKind] = useState<DialogKind>(null);
   const [editingEntry, setEditingEntry] = useState<ResumeEntryView>();
+  const [viewingEntry, setViewingEntry] = useState<ResumeEntryView>();
   const [workspaceTab, setWorkspaceTab] = useState<"vault" | "jd">("vault");
   const pendingCandidateCounts = candidates.reduce<Record<number, number>>((counts, candidate) => {
     if (candidate.state === "pending") counts[candidate.resumeAssetId] = (counts[candidate.resumeAssetId] ?? 0) + 1;
@@ -31,6 +33,7 @@ export function ResumeWorkspace({ assets, entries, candidates, jdTasks }: Resume
   }, [router]);
 
   const editEntry = useCallback((entry: ResumeEntryView) => {
+    setViewingEntry(undefined);
     setEditingEntry(entry);
     setDialogKind("entry");
   }, []);
@@ -64,7 +67,7 @@ export function ResumeWorkspace({ assets, entries, candidates, jdTasks }: Resume
               <Plus className="h-4 w-4" />添加条目
             </Button>
           </div>
-          <ResumeEntryList entries={entries} onEdit={editEntry} />
+          <ResumeEntryList entries={entries} onView={setViewingEntry} onEdit={editEntry} />
         </section>
       </div> : <JdMatchingWorkspace entries={entries} tasks={jdTasks} />}
 
@@ -78,6 +81,7 @@ export function ResumeWorkspace({ assets, entries, candidates, jdTasks }: Resume
           </div>
         </div>
       ) : null}
+      {viewingEntry ? <ResumeEntryDetail entry={viewingEntry} onClose={() => setViewingEntry(undefined)} onEdit={editEntry} /> : null}
     </>
   );
 }

@@ -23,6 +23,16 @@ export type DeepSeekErrorCode =
   | "provider_error"
   | "invalid_response";
 
+function isOptimizableNarrativeField(type: OptimizationPromptInput["materials"][number]["type"], key: string) {
+  switch (type) {
+    case "project": return key === "content";
+    case "experience": return key === "responsibilities" || key === "workContent";
+    case "education": return key === "content";
+    case "skill": return key === "content";
+    case "honor": return false;
+  }
+}
+
 export class DeepSeekError extends Error {
   constructor(
     public readonly code: DeepSeekErrorCode,
@@ -190,7 +200,17 @@ export async function optimizeEntriesForJd(
       const proposedKeys = Object.keys(suggestion.proposedContent).sort();
       if (originalKeys.length !== proposedKeys.length
         || originalKeys.some((key, index) => key !== proposedKeys[index])) return false;
-      return originalKeys.every((key) => original.content[key] !== "" || suggestion.proposedContent[key] === "");
+      const originalContent = original.content as Record<string, string | string[]>;
+      const proposedContent = suggestion.proposedContent as Record<string, string | string[]>;
+      return originalKeys.every((key) => {
+        const originalValue = originalContent[key];
+        const proposedValue = proposedContent[key];
+        if (Array.isArray(originalValue)) {
+          return Array.isArray(proposedValue) && JSON.stringify(originalValue) === JSON.stringify(proposedValue);
+        }
+        if (!isOptimizableNarrativeField(original.type, key)) return proposedValue === originalValue;
+        return originalValue !== "" || proposedValue === "";
+      });
     });
     if (!preservesStructure) continue;
 

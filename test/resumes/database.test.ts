@@ -4,6 +4,7 @@ import { getTableConfig } from "drizzle-orm/sqlite-core";
 
 import {
   resumeAssets,
+  resumeEntries,
   resumeEntryCandidates,
 } from "../../src/db/schema";
 
@@ -29,4 +30,13 @@ test("resume candidates cascade with assets and retain set-null duplicate links"
   assert.equal(assetReference?.onDelete, "cascade");
   assert.equal(duplicateReference?.foreignColumns[0].name, "id");
   assert.equal(duplicateReference?.onDelete, "set null");
+});
+
+test("structured resume storage removes completeness and persists candidate tags", () => {
+  const entryColumns = Object.fromEntries(getTableConfig(resumeEntries).columns.map((column) => [column.name, column]));
+  const candidateColumns = Object.fromEntries(getTableConfig(resumeEntryCandidates).columns.map((column) => [column.name, column]));
+
+  assert.equal("completeness" in entryColumns, false);
+  assert.equal(candidateColumns.tags_json.notNull, true);
+  assert.equal(candidateColumns.tags_json.default, "[]");
 });

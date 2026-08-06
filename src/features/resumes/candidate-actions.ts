@@ -14,6 +14,7 @@ import {
   acceptResumeCandidateSchema,
   generateResumeCandidatesSchema,
   parseResumeEntryContent,
+  parseResumeEntryTags,
   resumeCandidateIdSchema,
   stringifyResumeEntryContent,
 } from "@/features/resumes/schema";
@@ -34,6 +35,7 @@ function getFormalEntries() {
     type: entry.type,
     title: entry.title,
     content: parseResumeEntryContent(entry.contentJson),
+    tags: parseResumeEntryTags(entry.tagsJson),
   }));
 }
 
@@ -90,6 +92,7 @@ export async function generateResumeCandidatesAction(
           type: candidate.type,
           title: candidate.title,
           contentJson: stringifyResumeEntryContent(candidate.content),
+          tagsJson: JSON.stringify(candidate.tags),
           sourceExcerpt: candidate.sourceExcerpt,
           duplicateEntryId: candidate.duplicateEntryId,
           duplicateKind: candidate.duplicateKind,
@@ -155,8 +158,7 @@ export async function acceptResumeCandidateAction(
       type: parsed.data.type,
       title: parsed.data.title,
       contentJson: stringifyResumeEntryContent(parsed.data.content),
-      tagsJson: "[]",
-      completeness: "complete",
+      tagsJson: JSON.stringify(parsed.data.tags),
       createdAt: timestamp,
       updatedAt: timestamp,
     }).run();
@@ -164,6 +166,7 @@ export async function acceptResumeCandidateAction(
       type: parsed.data.type,
       title: parsed.data.title,
       contentJson: stringifyResumeEntryContent(parsed.data.content),
+      tagsJson: JSON.stringify(parsed.data.tags),
       state: "accepted",
       updatedAt: timestamp,
     }).where(and(eq(resumeEntryCandidates.id, candidate.id), eq(resumeEntryCandidates.state, "pending"))).run();

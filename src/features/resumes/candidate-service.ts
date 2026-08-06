@@ -27,6 +27,7 @@ export function prepareGeneratedCandidates(
       type: candidate.type,
       title: candidate.title,
       content: candidate.content,
+      tags: candidate.tags,
       sourceExcerpt: candidate.sourceExcerpt,
       duplicateEntryId: candidate.similarEntryId,
       duplicateKind: candidate.similarEntryId === null ? "none" : "similar",
