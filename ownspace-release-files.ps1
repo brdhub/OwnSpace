@@ -24,7 +24,7 @@ function Get-OwnSpaceManagedFiles {
 }
 
 function Get-OwnSpaceProtectedNames {
-  @("data", ".env.local", "backups", "node_modules", ".next-build", ".next-dev", ".git")
+  @("data", ".env.local", "backups", "node_modules", ".next-build", ".next-dev", ".git", ".ownspace-update.lock")
 }
 
 function Copy-OwnSpaceManagedFiles {

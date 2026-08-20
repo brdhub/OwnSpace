@@ -229,7 +229,7 @@ git commit -m "feat: validate OwnSpace update packages"
 - Produces: `New-OwnSpaceUpdateBackup`, `Install-OwnSpaceArchive`, `Restore-OwnSpaceUpdateBackup`, `Invoke-OwnSpaceUpdatePackage`, `Enter-OwnSpaceUpdateLock`, and `Exit-OwnSpaceUpdateLock`.
 - Consumes: Task 2 manifest/archive validation and path guards; existing `Stop-OwnSpaceServer` and npm invocation are injected as named commands that Pester can mock.
 
-- [ ] **Step 1: Write failing successful-upgrade and rollback tests**
+- [x] **Step 1: Write failing successful-upgrade and rollback tests**
 
 ```powershell
 Describe "OwnSpace transactional update" {
@@ -263,13 +263,13 @@ Describe "OwnSpace transactional update" {
 
 The fixture helper creates a valid ZIP and manifest using `Compress-Archive` and `Get-FileHash`; keep all fixture paths inside `$TestDrive`.
 
-- [ ] **Step 2: Run transaction tests and verify the orchestrator is missing**
+- [x] **Step 2: Run transaction tests and verify the orchestrator is missing**
 
 Run: `powershell.exe -NoProfile -Command "Invoke-Pester test/ownspace-update-transaction.Tests.ps1"`
 
 Expected: FAIL because `Invoke-OwnSpaceUpdatePackage` is undefined.
 
-- [ ] **Step 3: Implement the transaction boundary**
+- [x] **Step 3: Implement the transaction boundary**
 
 ```powershell
 function Invoke-OwnSpaceUpdatePackage {
@@ -304,17 +304,17 @@ function Invoke-OwnSpaceUpdatePackage {
 
 `Invoke-OwnSpacePostInstall` runs `npm ci` only if needed, then `db:migrate`, `db:init`, `build`, starts OwnSpace, and polls the health URL. It treats any nonzero command or health timeout as failure.
 
-- [ ] **Step 4: Add lock, retention, and failure-phase tests**
+- [x] **Step 4: Add lock, retention, and failure-phase tests**
 
 Add cases that assert a second lock is rejected; dependency, migration, build, and health failures each restore old code/data; only the three newest successful backup directories are retained; and cleanup refuses a path outside `$ApplicationRoot\backups`.
 
-- [ ] **Step 5: Run validation and transaction tests**
+- [x] **Step 5: Run validation and transaction tests**
 
 Run: `powershell.exe -NoProfile -Command "Invoke-Pester test/ownspace-update-validation.Tests.ps1,test/ownspace-update-transaction.Tests.ps1"`
 
 Expected: all tests PASS with no file created outside `$TestDrive`.
 
-- [ ] **Step 6: Commit the transactional engine**
+- [x] **Step 6: Commit the transactional engine**
 
 ```bash
 git add ownspace-update-functions.ps1 test/ownspace-update-transaction.Tests.ps1
