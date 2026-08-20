@@ -84,6 +84,13 @@ Describe "OwnSpace update validation" {
     { Select-OwnSpaceReleaseAssets -Release $release } | Should Throw
   }
 
+  It "allows only HTTPS GitHub asset redirect hosts" {
+    Test-OwnSpaceAllowedDownloadUri -Uri ([uri]"https://github.com/brdhub/OwnSpace/releases/download/v3.1.1/update.zip") | Should Be $true
+    Test-OwnSpaceAllowedDownloadUri -Uri ([uri]"https://objects.githubusercontent.com/release-asset/file") | Should Be $true
+    { Test-OwnSpaceAllowedDownloadUri -Uri ([uri]"http://github.com/file") } | Should Throw
+    { Test-OwnSpaceAllowedDownloadUri -Uri ([uri]"https://evil.example/file") } | Should Throw
+  }
+
   It "accepts a complete archive whose hash matches the manifest" {
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $payload = Join-Path $TestDrive "valid-payload/OwnSpace"

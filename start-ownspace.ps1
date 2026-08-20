@@ -2,9 +2,6 @@
 
 $projectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $url = "http://localhost:3000"
-$projectNodeRoot = "C:\Users\brddd\tools\node-v22.22.3-win-x64"
-$projectNodeExe = Join-Path $projectNodeRoot "node.exe"
-$projectNpmCmd = Join-Path $projectNodeRoot "npm.cmd"
 
 function Test-OwnSpaceServer {
   try {
@@ -93,14 +90,25 @@ function Stop-OwnSpaceServer {
 
 Set-Location -LiteralPath $projectRoot
 
-if (-not (Test-Path -LiteralPath $projectNodeExe) -or -not (Test-Path -LiteralPath $projectNpmCmd)) {
-  Write-Host "OwnSpace cannot find its project Node.js runtime at $projectNodeRoot." -ForegroundColor Yellow
-  Write-Host "Extract Node.js 22 LTS there, then double-click start-ownspace.cmd again." -ForegroundColor Yellow
+try {
+  $nodeRuntime = Find-OwnSpaceNodeRuntime -ApplicationRoot $projectRoot
+} catch {
+  Write-Host $_.Exception.Message -ForegroundColor Yellow
+  Write-Host "Install Node.js 22 LTS, then double-click start-ownspace.cmd again." -ForegroundColor Yellow
   Read-Host "Press Enter to exit"
   exit 1
 }
+$projectNodeExe = $nodeRuntime.Node
+$projectNpmCmd = $nodeRuntime.Npm
+$projectNodeRoot = Split-Path -Parent $projectNodeExe
 
 $env:Path = "$projectNodeRoot;$env:Path"
+
+$currentVersion = Get-OwnSpaceInstalledVersion -ApplicationRoot $projectRoot
+$startupUpdate = Invoke-OwnSpaceStartupUpdate -ApplicationRoot $projectRoot -CurrentVersion $currentVersion
+if ($startupUpdate -eq "updated") {
+  exit 0
+}
 
 try {
   $nodeModulesPath = Join-Path $projectRoot "node_modules"

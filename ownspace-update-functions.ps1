@@ -141,6 +141,16 @@ function Test-OwnSpaceReleaseAssetUrl {
   return $true
 }
 
+function Test-OwnSpaceAllowedDownloadUri {
+  param([Parameter(Mandatory = $true)][uri]$Uri)
+
+  $allowedHosts = @("github.com", "api.github.com", "objects.githubusercontent.com", "github-releases.githubusercontent.com")
+  if ($Uri.Scheme -ne "https" -or $allowedHosts -notcontains $Uri.Host.ToLowerInvariant()) {
+    throw "OwnSpace update download was redirected outside trusted GitHub hosts."
+  }
+  return $true
+}
+
 function Select-OwnSpaceReleaseAssets {
   param(
     [Parameter(Mandatory = $true)]

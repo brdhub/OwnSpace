@@ -333,7 +333,7 @@ git commit -m "feat: add transactional OwnSpace updater"
 - Produces: `Find-OwnSpaceNodeRuntime -ApplicationRoot`, `Get-OwnSpaceLatestRelease`, `Receive-OwnSpaceReleaseAssets`, and `Invoke-OwnSpaceStartupUpdate`.
 - Consumes: Task 2 asset selection and Task 3 `Invoke-OwnSpaceUpdatePackage`.
 
-- [ ] **Step 1: Write failing Node discovery and startup fallback tests**
+- [x] **Step 1: Write failing Node discovery and startup fallback tests**
 
 ```powershell
 Describe "OwnSpace startup update" {
@@ -359,13 +359,13 @@ Describe "OwnSpace startup update" {
 }
 ```
 
-- [ ] **Step 2: Run launcher tests and verify the new functions fail**
+- [x] **Step 2: Run launcher tests and verify the new functions fail**
 
 Run: `powershell.exe -NoProfile -Command "Invoke-Pester test/start-ownspace.Tests.ps1"`
 
 Expected: FAIL on missing runtime/update functions.
 
-- [ ] **Step 3: Implement compatible Node.js discovery**
+- [x] **Step 3: Implement compatible Node.js discovery**
 
 ```powershell
 function Find-OwnSpaceNodeRuntime([string]$ApplicationRoot) {
@@ -386,7 +386,7 @@ function Find-OwnSpaceNodeRuntime([string]$ApplicationRoot) {
 
 Accept Node `20.16.0 <= x < 21.0.0` or `x >= 22.3.0`, matching `package.json#engines`. Remove the developer-specific `C:\Users\brddd\tools\...` path from `start-ownspace.ps1`.
 
-- [ ] **Step 4: Implement GitHub discovery, prompt, and fail-open startup**
+- [x] **Step 4: Implement GitHub discovery, prompt, and fail-open startup**
 
 Use `https://api.github.com/repos/brdhub/OwnSpace/releases/latest`, `Invoke-RestMethod -TimeoutSec 4`, fixed `OwnSpace-Updater/3.1.0` User-Agent, JSON/asset count limits, and Task 2 exact asset selection. Download selected assets to a GUID temporary directory with `Invoke-WebRequest`; validate their final hosts against `github.com`, `api.github.com`, `objects.githubusercontent.com`, and `github-releases.githubusercontent.com` before Task 3 invocation.
 
@@ -409,13 +409,13 @@ Invoke-OwnSpaceNormalStartup
 
 Register this fixed, read-only, user-confirmed GitHub Release metadata/asset access as an explicit external-call exception in `项目工程约束.md`.
 
-- [ ] **Step 5: Run startup tests**
+- [x] **Step 5: Run startup tests**
 
 Run: `powershell.exe -NoProfile -Command "Invoke-Pester test/start-ownspace.Tests.ps1,test/ownspace-update-validation.Tests.ps1"`
 
 Expected: all tests PASS; mocks prove no real network request occurs.
 
-- [ ] **Step 6: Commit startup update support**
+- [x] **Step 6: Commit startup update support**
 
 ```bash
 git add start-ownspace.ps1 start-ownspace-functions.ps1 test/start-ownspace.Tests.ps1 项目工程约束.md
