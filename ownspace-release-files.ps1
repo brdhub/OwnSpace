@@ -17,6 +17,8 @@ function Get-OwnSpaceManagedFiles {
     "start-ownspace.ps1",
     "ownspace-release-files.ps1",
     "ownspace-update-functions.ps1",
+    "offline-update-ownspace.cmd",
+    "offline-update-ownspace.ps1",
     "tailwind.config.ts",
     "tsconfig.json",
     "项目工程约束.md"

@@ -11,59 +11,6 @@ function Install-OwnSpaceDependencies {
   Invoke-NpmCommand -Arguments @("ci") -Description "Installing or updating dependencies (internet required)..."
 }
 
-function Test-OwnSpaceSupportedNodeVersion {
-  param([Parameter(Mandatory = $true)][string]$Version)
-
-  if ($Version -notmatch '^v?(\d+)\.(\d+)\.(\d+)$') {
-    return $false
-  }
-  $parsed = [version]::new([int]$Matches[1], [int]$Matches[2], [int]$Matches[3])
-  return (($parsed -ge [version]"20.16.0" -and $parsed -lt [version]"21.0.0") -or $parsed -ge [version]"22.3.0")
-}
-
-function Get-OwnSpaceNodeVersion {
-  param([Parameter(Mandatory = $true)][string]$NodePath)
-
-  return (& $NodePath --version 2>$null).Trim()
-}
-
-function Find-OwnSpaceNodeRuntime {
-  param([Parameter(Mandatory = $true)][string]$ApplicationRoot)
-
-  $candidates = @([pscustomobject]@{
-    Source = "bundled"
-    Node = Join-Path $ApplicationRoot ".runtime/node.exe"
-    Npm = Join-Path $ApplicationRoot ".runtime/npm.cmd"
-  })
-  $pathNode = Get-Command node.exe -ErrorAction SilentlyContinue
-  $pathNpm = Get-Command npm.cmd -ErrorAction SilentlyContinue
-  if ($pathNode -and $pathNpm) {
-    $candidates += [pscustomobject]@{ Source="path"; Node=$pathNode.Source; Npm=$pathNpm.Source }
-  }
-  if ($env:ProgramFiles) {
-    $candidates += [pscustomobject]@{
-      Source = "system"
-      Node = Join-Path $env:ProgramFiles "nodejs/node.exe"
-      Npm = Join-Path $env:ProgramFiles "nodejs/npm.cmd"
-    }
-  }
-
-  foreach ($candidate in $candidates) {
-    if (-not (Test-Path -LiteralPath $candidate.Node -PathType Leaf) -or -not (Test-Path -LiteralPath $candidate.Npm -PathType Leaf)) {
-      continue
-    }
-    try {
-      $version = Get-OwnSpaceNodeVersion -NodePath $candidate.Node
-      if (Test-OwnSpaceSupportedNodeVersion $version) {
-        return [pscustomobject]@{ Source=$candidate.Source; Node=$candidate.Node; Npm=$candidate.Npm; Version=$version }
-      }
-    } catch {
-      continue
-    }
-  }
-  throw "OwnSpace requires Node.js 22 LTS. Install it and run start-ownspace.cmd again."
-}
-
 function Get-OwnSpaceLatestRelease {
   $headers = @{ Accept="application/vnd.github+json"; "User-Agent"="OwnSpace-Updater/$script:OwnSpaceUpdaterVersion" }
   $response = Invoke-WebRequest -Uri "https://api.github.com/repos/brdhub/OwnSpace/releases/latest" -Headers $headers -UseBasicParsing -TimeoutSec 4

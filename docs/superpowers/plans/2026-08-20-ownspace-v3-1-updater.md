@@ -434,7 +434,7 @@ git commit -m "feat: prompt for GitHub updates on startup"
 - Produces: `Resolve-OwnSpaceApplicationRoot -CandidateRoot` and an offline `.cmd` entry point.
 - Consumes: Task 2 validation and Task 3 shared update engine.
 
-- [ ] **Step 1: Write failing application-root tests**
+- [x] **Step 1: Write failing application-root tests**
 
 ```powershell
 Describe "Offline OwnSpace updater" {
@@ -450,13 +450,13 @@ Describe "Offline OwnSpace updater" {
 }
 ```
 
-- [ ] **Step 2: Run the offline tests and verify the resolver is missing**
+- [x] **Step 2: Run the offline tests and verify the resolver is missing**
 
 Run: `powershell.exe -NoProfile -Command "Invoke-Pester test/offline-update-ownspace.Tests.ps1"`
 
 Expected: FAIL on missing offline updater.
 
-- [ ] **Step 3: Implement the offline entry**
+- [x] **Step 3: Implement the offline entry**
 
 `offline-update-ownspace.cmd` only launches the adjacent PowerShell script:
 
@@ -480,13 +480,13 @@ Reject target versions less than or equal to the installed version before any ba
 
 Add both offline updater files to `Get-OwnSpaceManagedFiles` after creating them.
 
-- [ ] **Step 4: Run offline and transaction tests**
+- [x] **Step 4: Run offline and transaction tests**
 
 Run: `powershell.exe -NoProfile -Command "Invoke-Pester test/offline-update-ownspace.Tests.ps1,test/ownspace-update-transaction.Tests.ps1"`
 
 Expected: all tests PASS without displaying a real folder dialog.
 
-- [ ] **Step 5: Commit the offline updater**
+- [x] **Step 5: Commit the offline updater**
 
 ```bash
 git add ownspace-release-files.ps1 offline-update-ownspace.cmd offline-update-ownspace.ps1 test/offline-update-ownspace.Tests.ps1
