@@ -505,7 +505,7 @@ git commit -m "feat: add one-click offline updater"
 - Produces: `New-OwnSpaceReleaseArtifacts -ProjectRoot -OutputDirectory -PublishedAt`, update ZIP/hash/manifest/offline ZIP.
 - Consumes: Task 1 managed files and Task 5 offline entry.
 
-- [ ] **Step 1: Write a failing packaging test**
+- [x] **Step 1: Write a failing packaging test**
 
 ```powershell
 Describe "OwnSpace release artifacts" {
@@ -522,13 +522,13 @@ Describe "OwnSpace release artifacts" {
 }
 ```
 
-- [ ] **Step 2: Run the packaging test and verify the function is missing**
+- [x] **Step 2: Run the packaging test and verify the function is missing**
 
 Run: `powershell.exe -NoProfile -Command "Invoke-Pester test/make-release-package.Tests.ps1"`
 
 Expected: FAIL on missing release packager.
 
-- [ ] **Step 3: Implement deterministic artifact generation**
+- [x] **Step 3: Implement deterministic artifact generation**
 
 Read and validate `package.json#version`, copy managed files into a temporary `OwnSpace` root, create `OwnSpace-v<version>-update.zip`, calculate SHA-256, write the exact manifest contract with UTF-8 without BOM, write the checksum file as `<hash>  <archive-name>`, then create the offline ZIP containing:
 
@@ -544,13 +544,13 @@ OwnSpace-v<version>-manifest.json
 
 Always use a GUID temporary directory and validated cleanup. Add generated `dist/` artifacts to `.gitignore` if not already ignored.
 
-- [ ] **Step 4: Run release and share packaging tests**
+- [x] **Step 4: Run release and share packaging tests**
 
 Run: `powershell.exe -NoProfile -Command "Invoke-Pester test/make-release-package.Tests.ps1,test/ownspace-release-files.Tests.ps1"`
 
 Expected: all tests PASS; ZIP/hash/manifest names match version `3.1.0`.
 
-- [ ] **Step 5: Commit the release packager**
+- [x] **Step 5: Commit the release packager**
 
 ```bash
 git add make-release-package.cmd make-release-package.ps1 test/make-release-package.Tests.ps1 .gitignore
