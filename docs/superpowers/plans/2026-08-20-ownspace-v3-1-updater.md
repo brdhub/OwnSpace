@@ -34,7 +34,7 @@
 - Produces: `Get-OwnSpaceManagedDirectories`, `Get-OwnSpaceManagedFiles`, `Get-OwnSpaceProtectedNames`, and `Copy-OwnSpaceManagedFiles -SourceRoot -DestinationRoot`.
 - Consumes: Existing share-package file and directory lists.
 
-- [ ] **Step 1: Write failing contract tests**
+- [x] **Step 1: Write failing contract tests**
 
 ```powershell
 $root = Split-Path -Parent $PSScriptRoot
@@ -64,13 +64,13 @@ Describe "OwnSpace release file contract" {
 }
 ```
 
-- [ ] **Step 2: Run the test and verify the helper is missing**
+- [x] **Step 2: Run the test and verify the helper is missing**
 
 Run: `powershell.exe -NoProfile -Command "Invoke-Pester test/ownspace-release-files.Tests.ps1"`
 
 Expected: FAIL because `ownspace-release-files.ps1` does not exist.
 
-- [ ] **Step 3: Implement one managed-file definition**
+- [x] **Step 3: Implement one managed-file definition**
 
 ```powershell
 function Get-OwnSpaceManagedDirectories { @("drizzle", "public", "scripts", "src") }
@@ -100,13 +100,13 @@ function Copy-OwnSpaceManagedFiles {
 
 Update `make-share-package.ps1` to dot-source the helper and replace its private arrays/copy loops with `Copy-OwnSpaceManagedFiles`.
 
-- [ ] **Step 4: Run release contract and existing launcher tests**
+- [x] **Step 4: Run release contract and existing launcher tests**
 
 Run: `powershell.exe -NoProfile -Command "Invoke-Pester test/ownspace-release-files.Tests.ps1,test/start-ownspace.Tests.ps1"`
 
 Expected: all tests PASS and a generated share package still excludes protected names.
 
-- [ ] **Step 5: Commit the release contract**
+- [x] **Step 5: Commit the release contract**
 
 ```bash
 git add ownspace-release-files.ps1 make-share-package.ps1 test/ownspace-release-files.Tests.ps1

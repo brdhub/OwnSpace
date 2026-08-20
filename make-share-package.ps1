@@ -7,34 +7,13 @@ $archivePath = Join-Path $outputDirectory "OwnSpace-share-$timestamp.zip"
 $temporaryRoot = Join-Path $projectRoot ".share-package-$([guid]::NewGuid().ToString('N'))"
 $packageRoot = Join-Path $temporaryRoot "OwnSpace"
 
-$directories = @("drizzle", "public", "scripts", "src")
-$files = @(
-  "drizzle.config.ts",
-  "eslint.config.mjs",
-  "next-env.d.ts",
-  "next.config.ts",
-  "package-lock.json",
-  "package.json",
-  "postcss.config.mjs",
-  "README.md",
-  "start-ownspace.cmd",
-  "start-ownspace-functions.ps1",
-  "start-ownspace.ps1",
-  "tailwind.config.ts",
-  "tsconfig.json"
-)
+. (Join-Path $projectRoot "ownspace-release-files.ps1")
 
 try {
   New-Item -ItemType Directory -Path $packageRoot -Force | Out-Null
   New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
 
-  foreach ($directory in $directories) {
-    Copy-Item -LiteralPath (Join-Path $projectRoot $directory) -Destination $packageRoot -Recurse
-  }
-
-  foreach ($file in $files) {
-    Copy-Item -LiteralPath (Join-Path $projectRoot $file) -Destination $packageRoot
-  }
+  Copy-OwnSpaceManagedFiles -SourceRoot $projectRoot -DestinationRoot $packageRoot
 
   Compress-Archive -LiteralPath $packageRoot -DestinationPath $archivePath -CompressionLevel Optimal
 
