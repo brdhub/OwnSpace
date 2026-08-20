@@ -124,7 +124,7 @@ git commit -m "refactor: centralize OwnSpace release files"
 - Produces: `ConvertTo-OwnSpaceVersion`, `Test-OwnSpaceUpdateAvailable`, `Read-OwnSpaceUpdateManifest`, `Select-OwnSpaceReleaseAssets`, `Test-OwnSpaceUpdateArchive`, and `Assert-OwnSpaceChildPath`.
 - Consumes: `Get-OwnSpaceProtectedNames` from Task 1.
 
-- [ ] **Step 1: Write failing validation tests**
+- [x] **Step 1: Write failing validation tests**
 
 ```powershell
 $root = Split-Path -Parent $PSScriptRoot
@@ -161,13 +161,13 @@ Describe "OwnSpace update validation" {
 }
 ```
 
-- [ ] **Step 2: Run validation tests and verify missing functions fail**
+- [x] **Step 2: Run validation tests and verify missing functions fail**
 
 Run: `powershell.exe -NoProfile -Command "Invoke-Pester test/ownspace-update-validation.Tests.ps1"`
 
 Expected: FAIL with unresolved updater validation functions.
 
-- [ ] **Step 3: Implement strict parsers and path guards**
+- [x] **Step 3: Implement strict parsers and path guards**
 
 ```powershell
 Set-StrictMode -Version Latest
@@ -206,13 +206,13 @@ Implement manifest property/type checks, exact filename checks, SHA-256 syntax, 
 
 Add `ownspace-update-functions.ps1` to `Get-OwnSpaceManagedFiles` only after the helper exists, keeping the share package valid at every commit.
 
-- [ ] **Step 4: Run validation tests**
+- [x] **Step 4: Run validation tests**
 
 Run: `powershell.exe -NoProfile -Command "Invoke-Pester test/ownspace-update-validation.Tests.ps1"`
 
 Expected: all validation tests PASS.
 
-- [ ] **Step 5: Commit validation helpers**
+- [x] **Step 5: Commit validation helpers**
 
 ```bash
 git add ownspace-release-files.ps1 ownspace-update-functions.ps1 test/ownspace-update-validation.Tests.ps1
