@@ -270,6 +270,20 @@ function Find-OwnSpaceNodeRuntime {
   if ($pathNode -and $pathNpm) {
     $candidates += [pscustomobject]@{ Source="path"; Node=$pathNode.Source; Npm=$pathNpm.Source }
   }
+  if ($env:NVM_HOME -and (Test-Path -LiteralPath $env:NVM_HOME -PathType Container)) {
+    $nvmVersions = @(
+      Get-ChildItem -LiteralPath $env:NVM_HOME -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -match '^v\d+\.\d+\.\d+$' } |
+        Sort-Object { [version]$_.Name.Substring(1) } -Descending
+    )
+    foreach ($nvmVersion in $nvmVersions) {
+      $candidates += [pscustomobject]@{
+        Source = "nvm"
+        Node = Join-Path $nvmVersion.FullName "node.exe"
+        Npm = Join-Path $nvmVersion.FullName "npm.cmd"
+      }
+    }
+  }
   if ($env:ProgramFiles) {
     $candidates += [pscustomobject]@{
       Source = "system"

@@ -36,6 +36,32 @@ Describe "OwnSpace Node runtime discovery" {
     $runtime.Source | Should Be "bundled"
     $runtime.Node | Should Be (Join-Path $runtimeRoot "node.exe")
   }
+
+  It "uses an installed NVM runtime when the active Node version is incompatible" {
+    $originalNvmHome = $env:NVM_HOME
+    $originalPath = $env:Path
+    $nvmHome = Join-Path $TestDrive "nvm"
+    $runtimeRoot = Join-Path $nvmHome "v22.22.3"
+    New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
+    New-Item -ItemType File -Path (Join-Path $runtimeRoot "node.exe"), (Join-Path $runtimeRoot "npm.cmd") | Out-Null
+    $env:NVM_HOME = $nvmHome
+    $env:Path = $TestDrive
+    Mock Get-OwnSpaceNodeVersion {
+      param($NodePath)
+      if ($NodePath -eq (Join-Path $runtimeRoot "node.exe")) { return "v22.22.3" }
+      return "v16.20.2"
+    }
+
+    try {
+      $runtime = Find-OwnSpaceNodeRuntime -ApplicationRoot $TestDrive
+
+      $runtime.Source | Should Be "nvm"
+      $runtime.Node | Should Be (Join-Path $runtimeRoot "node.exe")
+    } finally {
+      $env:NVM_HOME = $originalNvmHome
+      $env:Path = $originalPath
+    }
+  }
 }
 
 Describe "OwnSpace startup update" {

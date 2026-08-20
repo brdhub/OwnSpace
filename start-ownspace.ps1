@@ -102,6 +102,10 @@ $projectNodeExe = $nodeRuntime.Node
 $projectNpmCmd = $nodeRuntime.Npm
 $projectNodeRoot = Split-Path -Parent $projectNodeExe
 
+if ($nodeRuntime.Source -eq "nvm") {
+  Write-Host "Using installed NVM runtime $($nodeRuntime.Version) for OwnSpace." -ForegroundColor Cyan
+}
+
 $env:Path = "$projectNodeRoot;$env:Path"
 
 $currentVersion = Get-OwnSpaceInstalledVersion -ApplicationRoot $projectRoot
