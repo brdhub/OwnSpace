@@ -45,7 +45,7 @@ export const viewDefinitionSchema = z.object({
       conditions: z.array(z.object({
         fieldId: z.string(),
         operator: z.literal("contains"),
-        value: z.array(z.string()),
+        value: z.array(z.string()).nullable(),
       }).passthrough()),
     }),
     sortInfo: z.unknown().optional(),

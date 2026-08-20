@@ -243,6 +243,12 @@ export function normalizeFeishuRecord(
     roles: readText("岗位"),
     cities: readSelect("工作城市").join("、"),
     unrestrictedMajor: readCell("不限专业")?.value === true,
+    targetAudience: readSelect("招聘对象").join("、"),
+    degree: readText("学历"),
+    deadline: readText("截止时间"),
+    notes: readText("备注"),
+    writtenTestWaived: readCell("含免笔试")?.value === true,
+    announcementUrl: safeUrl(readCell("官方公告")?.value),
     applicationUrl: safeUrl(readCell("网申入口")?.value),
   };
 }
@@ -319,9 +325,11 @@ export async function fetchFeishuOpportunities(fetchImpl: typeof fetch = fetch):
 
   const matchesFilter = (record: FeishuRecord) => {
     const results = targetView.property.filterInfo.conditions.map((condition) => {
+      const conditionValue = condition.value;
+      if (conditionValue === null) return true;
       const raw = record[condition.fieldId]?.value;
       const values = Array.isArray(raw) ? raw : raw == null ? [] : [raw];
-      return values.some((value) => typeof value === "string" && condition.value.includes(value));
+      return values.some((value) => typeof value === "string" && conditionValue.includes(value));
     });
     return targetView.property.filterInfo.conjunction === "and" ? results.every(Boolean) : results.some(Boolean);
   };

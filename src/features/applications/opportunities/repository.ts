@@ -15,6 +15,11 @@ export function buildApplicationDraft(
     opportunity.industry ? `行业：${opportunity.industry}` : "",
     opportunity.cities ? `城市：${opportunity.cities}` : "",
     opportunity.unrestrictedMajor ? "专业：不限专业" : "",
+    opportunity.targetAudience ? `招聘对象：${opportunity.targetAudience}` : "",
+    opportunity.degree ? `学历：${opportunity.degree}` : "",
+    opportunity.deadline ? `截止时间：${opportunity.deadline}` : "",
+    opportunity.writtenTestWaived ? "流程：含免笔试岗位" : "",
+    opportunity.notes ? `备注：${opportunity.notes}` : "",
   ].filter(Boolean).join("；").slice(0, 1000);
 
   return {

@@ -83,6 +83,7 @@ test("candidate generation sends a JSON-output request and returns validated can
   assert.deepEqual(body.response_format, { type: "json_object" });
   assert.deepEqual(body.thinking, { type: "disabled" });
   assert.equal(body.model, "deepseek-v4-flash");
+  assert.equal(body.max_tokens, 8_000);
 });
 
 test("JD recommendation rejects IDs outside the submitted formal entries", async () => {

@@ -47,6 +47,17 @@ const fieldMap = {
     },
   },
   fldMajor: { id: "fldMajor", name: "不限专业", type: 7 },
+  fldAudience: {
+    id: "fldAudience",
+    name: "招聘对象",
+    type: 4,
+    property: { options: [{ id: "optGraduate", name: "2027届毕业生", color: 1 }] },
+  },
+  fldDegree: { id: "fldDegree", name: "学历", type: 1 },
+  fldDeadline: { id: "fldDeadline", name: "截止时间", type: 1 },
+  fldNotes: { id: "fldNotes", name: "备注", type: 1 },
+  fldNoWritten: { id: "fldNoWritten", name: "含免笔试", type: 7 },
+  fldAnnouncement: { id: "fldAnnouncement", name: "官方公告", type: 15 },
   fldApply: { id: "fldApply", name: "网申入口", type: 15 },
 };
 
@@ -59,6 +70,16 @@ const sourceRecord = {
   fldRoles: { modifiedUser: "user", modifiedTime: 1, value: [{ text: "后端开发，AI算法", type: "text" }] },
   fldCities: { modifiedUser: "user", modifiedTime: 1, value: ["optWuhan", "optShanghai"] },
   fldMajor: { modifiedUser: "user", modifiedTime: 1, value: false },
+  fldAudience: { modifiedUser: "user", modifiedTime: 1, value: ["optGraduate"] },
+  fldDegree: { modifiedUser: "user", modifiedTime: 1, value: [{ text: "本科及以上", type: "text" }] },
+  fldDeadline: { modifiedUser: "user", modifiedTime: 1, value: [{ text: "招满即止", type: "text" }] },
+  fldNotes: { modifiedUser: "user", modifiedTime: 1, value: [{ text: "提前批", type: "text" }] },
+  fldNoWritten: { modifiedUser: "user", modifiedTime: 1, value: true },
+  fldAnnouncement: {
+    modifiedUser: "user",
+    modifiedTime: 1,
+    value: [{ text: "官方公告", type: "url", link: "https://example.com/announcement" }],
+  },
   fldApply: {
     modifiedUser: "user",
     modifiedTime: 1,
@@ -83,6 +104,12 @@ test("normalizes a Feishu recruitment record by field name", () => {
     roles: "后端开发，AI算法",
     cities: "湖北-武汉、上海",
     unrestrictedMajor: false,
+    targetAudience: "2027届毕业生",
+    degree: "本科及以上",
+    deadline: "招满即止",
+    notes: "提前批",
+    writtenTestWaived: true,
+    announcementUrl: "https://example.com/announcement",
     applicationUrl: "https://example.com/apply",
   });
 });
@@ -187,7 +214,10 @@ test("fetches all table pages and returns only target-view records in rank order
                 property: {
                   filterInfo: {
                     conjunction: "and",
-                    conditions: [{ fieldId: "fldBatch", operator: "contains", value: ["optAutumn"] }],
+                    conditions: [
+                      { fieldId: "fldBatch", operator: "contains", value: ["optAutumn"] },
+                      { fieldId: "fldRoles", operator: "contains", value: null },
+                    ],
                   },
                   sortInfo: [{ fieldId: "fldUpdated", desc: true }],
                 },

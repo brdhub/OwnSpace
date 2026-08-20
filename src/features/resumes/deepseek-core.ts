@@ -81,9 +81,14 @@ type DeepSeekDependencies = {
   env?: DeepSeekEnvironment;
 };
 
+type DeepSeekRequestOptions = {
+  maxTokens?: number;
+};
+
 async function requestJson(
   messages: DeepSeekMessage[],
   dependencies: DeepSeekDependencies = {},
+  options: DeepSeekRequestOptions = {},
 ): Promise<unknown> {
   const config = getDeepSeekConfig(dependencies.env);
   const fetcher = dependencies.fetch ?? fetch;
@@ -102,7 +107,7 @@ async function requestJson(
         response_format: { type: "json_object" },
         thinking: { type: "disabled" },
         stream: false,
-        max_tokens: 4_000,
+        max_tokens: options.maxTokens ?? 4_000,
       }),
       signal: AbortSignal.timeout(config.timeoutMs),
     });
@@ -144,7 +149,7 @@ export async function generateEntryCandidates(
   const allowedIds = new Set(input.formalEntries.map((entry) => entry.id));
   const messages = buildCandidatePrompt(input);
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const raw = await requestJson(messages, dependencies);
+    const raw = await requestJson(messages, dependencies, { maxTokens: 8_000 });
     const parsed = generatedCandidateResponseSchema.safeParse(raw);
     if (!parsed.success) continue;
     if (parsed.data.candidates.some((candidate) => candidate.similarEntryId !== null && !allowedIds.has(candidate.similarEntryId))) continue;

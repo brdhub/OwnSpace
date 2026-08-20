@@ -39,6 +39,13 @@ const collisionGapByDensity: Record<PlanningDensity, number> = {
   detailed: 30,
 };
 
+const timelineBandClassNames = [
+  "bg-sky-50/70",
+  "bg-violet-50/65",
+  "bg-amber-50/65",
+  "bg-emerald-50/65",
+] as const;
+
 function getEventPriority(event: PlanningEvent) {
   if (event.eventType === "task") {
     return 0;
@@ -181,7 +188,7 @@ export function PlanningTimeline({ events, density, today, onSelectEvent, onCrea
       <div ref={scrollerRef} className="overflow-x-auto" onScroll={updateViewport}>
         <div
           ref={chartRef}
-          className="relative h-[360px] min-w-full cursor-crosshair"
+          className="relative isolate h-[360px] min-w-full cursor-crosshair overflow-hidden rounded-xl border border-border/70 bg-background shadow-inner"
           style={{ width }}
           onClick={(event) => {
             const rect = event.currentTarget.getBoundingClientRect();
@@ -189,15 +196,30 @@ export function PlanningTimeline({ events, density, today, onSelectEvent, onCrea
             onCreateAtDate(timelinePositionToDate(position));
           }}
         >
-          <div className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-1/2 bg-border" />
+          {ticks.map((tick, index) => {
+            const nextPosition = ticks[index + 1]?.position ?? 1;
+            return (
+              <div
+                key={`band-${tick.date}`}
+                className={cn("absolute inset-y-0 -z-10", timelineBandClassNames[Math.floor(index / 3) % timelineBandClassNames.length])}
+                style={{ left: `${tick.position * 100}%`, width: `${(nextPosition - tick.position) * 100}%` }}
+              />
+            );
+          })}
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_50%,transparent_0%,hsl(var(--card)/0.28)_100%)]" />
+          <div
+            className="absolute left-0 right-0 top-1/2 h-[3px] -translate-y-1/2 shadow-[0_1px_8px_rgba(15,118,110,0.16)]"
+            style={{ backgroundImage: "linear-gradient(90deg, #38bdf8 0%, #a78bfa 34%, #fbbf24 66%, #34d399 100%)" }}
+          />
           {ticks.map((tick) => (
-            <div key={tick.date} className="absolute top-0 h-full border-l border-border/70" style={{ left: `${tick.position * 100}%` }}>
+            <div key={tick.date} className="absolute top-0 h-full border-l border-border/45" style={{ left: `${tick.position * 100}%` }}>
               <div className="ml-2 mt-2 whitespace-nowrap text-xs text-muted-foreground">{tick.label}</div>
             </div>
           ))}
           {todayPosition !== null ? (
-            <div className="absolute top-8 h-[292px] border-l-2 border-primary" style={{ left: `${todayPosition * 100}%` }}>
-              <span className="ml-2 rounded-md bg-primary px-2 py-1 text-xs text-primary-foreground">今天</span>
+            <div className="absolute top-8 h-[292px] border-l border-primary/80 shadow-[0_0_12px_hsl(var(--primary)/0.35)]" style={{ left: `${todayPosition * 100}%` }}>
+              <span className="ml-2 rounded-full bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground shadow-sm">今天</span>
+              <span className="absolute left-0 top-[148px] h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-card bg-primary shadow-[0_0_0_4px_hsl(var(--primary)/0.18)]" />
             </div>
           ) : null}
           {visibleEvents.map(({ event, position }) => {
@@ -205,7 +227,7 @@ export function PlanningTimeline({ events, density, today, onSelectEvent, onCrea
             sameDayCounts.set(event.eventDate, count + 1);
             return <PlanningTimelineEvent key={event.id} event={event} position={position} sameDayIndex={count} onSelect={onSelectEvent} />;
           })}
-          <p className="absolute bottom-3 left-4 text-sm text-muted-foreground">点击时间轴空白位置，可以在对应日期放下一个小节点。</p>
+          <p className="absolute bottom-3 left-4 rounded-full border border-white/60 bg-white/65 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">点击空白位置，可以在对应日期放下节点。</p>
         </div>
       </div>
       <div className="mt-4 rounded-md border border-border bg-background p-3">
@@ -214,7 +236,7 @@ export function PlanningTimeline({ events, density, today, onSelectEvent, onCrea
           <span>拖动蓝色视野框或点击缩略图，可以快速移动视野</span>
         </div>
         <div
-          className="relative h-12 cursor-pointer rounded-md border border-border bg-card"
+          className="relative h-12 cursor-pointer overflow-hidden rounded-lg border border-border bg-gradient-to-r from-sky-50 via-violet-50 to-emerald-50"
           onClick={(event) => {
             const rect = event.currentTarget.getBoundingClientRect();
             scrollToMinimapPosition((event.clientX - rect.left) / rect.width);
@@ -249,14 +271,14 @@ export function PlanningTimeline({ events, density, today, onSelectEvent, onCrea
             return (
               <span
                 key={event.id}
-                className={cn("absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border", meta.dotClassName)}
+                className={cn("absolute top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full border", meta.dotClassName)}
                 style={{ left: `${position * 100}%` }}
               />
             );
           })}
           <div
             data-minimap-viewport
-            className="absolute top-1 h-10 cursor-grab rounded border border-primary bg-primary/10 active:cursor-grabbing"
+            className="absolute top-1 h-10 cursor-grab rounded-md border border-primary/70 bg-primary/10 shadow-[0_0_10px_hsl(var(--primary)/0.12)] backdrop-blur-[1px] active:cursor-grabbing"
             style={{ left: `${viewport.left * 100}%`, width: `${viewport.width * 100}%` }}
           />
         </div>

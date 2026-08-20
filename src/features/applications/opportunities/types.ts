@@ -8,6 +8,12 @@ export type NormalizedRecruitmentOpportunity = {
   roles: string;
   cities: string;
   unrestrictedMajor: boolean;
+  targetAudience: string;
+  degree: string;
+  deadline: string;
+  notes: string;
+  writtenTestWaived: boolean;
+  announcementUrl: string | null;
   applicationUrl: string | null;
 };
 

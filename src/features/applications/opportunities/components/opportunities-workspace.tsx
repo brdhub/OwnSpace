@@ -159,6 +159,7 @@ export function OpportunitiesWorkspace({
                     <h2 className="font-semibold text-foreground">{opportunity.company}</h2>
                     {opportunity.batch ? <Badge>{opportunity.batch}</Badge> : null}
                     {opportunity.unrestrictedMajor ? <Badge variant="outline">不限专业</Badge> : null}
+                    {opportunity.writtenTestWaived ? <Badge variant="outline">含免笔试</Badge> : null}
                   </div>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {[opportunity.companyType, opportunity.industry].filter(Boolean).join(" · ") || "企业信息待补充"}
@@ -167,15 +168,25 @@ export function OpportunitiesWorkspace({
                 <div className="min-w-0">
                   <p className="text-sm leading-6 text-foreground">{opportunity.roles || "岗位详情请查看官方公告"}</p>
                   {opportunity.cities ? <p className="mt-1 text-xs text-muted-foreground">{opportunity.cities}</p> : null}
+                  {[opportunity.targetAudience, opportunity.degree].filter(Boolean).length ? (
+                    <p className="mt-1 text-xs text-muted-foreground">{[opportunity.targetAudience, opportunity.degree].filter(Boolean).join(" · ")}</p>
+                  ) : null}
+                  {opportunity.notes ? <p className="mt-1 text-xs leading-5 text-muted-foreground">{opportunity.notes}</p> : null}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   <p>{opportunity.sourceUpdatedDate ? `岗位更新：${formatDate(opportunity.sourceUpdatedDate)}` : "更新时间未标注"}</p>
+                  {opportunity.deadline ? <p className="mt-1">截止时间：{opportunity.deadline}</p> : null}
                   {opportunity.applicationId && opportunity.applicationStatus ? (
                     <p className="mt-1">投递状态：{applicationStatusMeta[opportunity.applicationStatus].label}</p>
                   ) : null}
                   {opportunity.applicationUrl ? (
                     <a href={opportunity.applicationUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-primary hover:underline">
                       打开投递页 <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : null}
+                  {opportunity.announcementUrl ? (
+                    <a href={opportunity.announcementUrl} target="_blank" rel="noreferrer" className="mt-1 ml-3 inline-flex items-center gap-1 text-primary hover:underline">
+                      官方公告 <ExternalLink className="h-3 w-3" />
                     </a>
                   ) : null}
                 </div>
