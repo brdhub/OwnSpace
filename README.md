@@ -26,7 +26,52 @@ npm run dev
 - `.next-dev`、`.next-build` 等构建缓存；
 - 日志和 Git 记录。
 
-朋友需要先安装 Node.js 22 LTS，然后解压并双击 `start-ownspace.cmd`。第一次启动会自动安装依赖、执行数据库迁移、初始化系统默认项并完成生产构建，因此需要联网且可能等待几分钟。以后双击时，脚本会比较源码和现有构建的更新时间：没有变化就直接启动，有更新则先停止旧的 OwnSpace 服务、重新构建，再打开 `http://localhost:3000`。
+朋友需要先安装 Node.js 22 LTS，然后解压并双击 `start-ownspace.cmd`。启动器会优先使用应用目录中可选的 `.runtime`，其次查找系统安装的兼容 Node.js，不再依赖开发者电脑上的固定路径。第一次启动会自动安装依赖、执行数据库迁移、初始化系统默认项并完成生产构建，因此需要联网且可能等待几分钟。以后双击时，脚本会比较源码和现有构建的更新时间：没有变化就直接启动，有更新则先停止旧的 OwnSpace 服务、重新构建，再打开 `http://localhost:3000`。
+
+## 升级已有安装（Windows）
+
+### 从 v2.3 或更早版本升级到 v3.1
+
+旧版本还没有内置升级器，需要最后进行一次离线升级：
+
+1. 解压 `OwnSpace-v3.1.0-offline-updater.zip`；
+2. 双击其中的 `升级 OwnSpace.cmd`；
+3. 如果弹出目录选择器，选择朋友原来的 OwnSpace 文件夹；
+4. 升级器会先备份 `data`、`.env.local` 和旧程序，再迁移数据库、构建并启动 v3.1。
+
+不要删除旧版目录或手动覆盖 `data`。升级成功后，原有投递、面经、日记、学习、规划、简历 PDF 与本机 DeepSeek 配置均保留。历史结构化简历条目仍受 v2.3 数据迁移规则影响，需要按 v2.3 的说明重新提取。
+
+### v3.1 及以后在线升级
+
+双击 `start-ownspace.cmd` 时，启动器会用短超时检查固定仓库 `brdhub/OwnSpace` 的最新正式 GitHub Release。只有发现更高版本时才提示；输入 `y` 后才会下载和安装，直接回车或输入 `N` 会继续启动当前版本。断网、GitHub 限流或检查失败不会阻止 OwnSpace 启动。
+
+在线升级只接受固定仓库的正式 Release，并校验资源名称、来源、manifest、独立 SHA-256 与 ZIP 安全边界。SHA-256 可以发现传输损坏或误包，但不等同于 Windows Authenticode 代码签名。
+
+### 一键离线升级
+
+每个正式版本同时提供 `OwnSpace-v<版本>-offline-updater.zip`。解压后双击 `升级 OwnSpace.cmd`，选择已有 OwnSpace 目录即可。在线和离线入口共用同一套备份、迁移、健康检查和失败回滚逻辑。
+
+### 备份与恢复
+
+升级备份保存在旧版目录的 `backups/<时间>-v<旧版本>/`，默认保留最近三次。升级失败时会自动恢复；如果需要人工恢复：
+
+1. 关闭 OwnSpace；
+2. 再额外复制一份当前 `data` 作为保险；
+3. 将目标备份中的 `data` 文件夹复制回 OwnSpace 根目录；
+4. 将同一备份 `program` 中的文件和目录复制回 OwnSpace 根目录；
+5. 如果备份中存在 `.env.local`，一并复制回根目录；
+6. 双击 `start-ownspace.cmd` 重新安装对应依赖、构建并启动。
+
+### 生成 GitHub Release 资源
+
+发布者先把 `package.json` 版本改为目标语义化版本，再双击 `make-release-package.cmd`。`dist` 会生成：
+
+- `OwnSpace-v<版本>-update.zip`；
+- `OwnSpace-v<版本>-update.sha256`；
+- `OwnSpace-v<版本>-manifest.json`；
+- `OwnSpace-v<版本>-offline-updater.zip`。
+
+在 GitHub 创建标签为 `v<版本>` 的正式 Release，并上传以上四个文件。不要标记为 draft 或 prerelease；不要把 `data`、`.env.local`、构建缓存或自行改名的资源上传为更新文件。
 
 当依赖清单发生变化时，启动器会先停止占用 3000 端口的旧 OwnSpace 服务，再执行 `npm ci`，避免 Windows 因 Next.js 原生模块仍在使用而报 `EPERM unlink next-swc...node`。如果正在用其他端口运行开发服务器，请先关闭对应终端，再双击启动器。
 

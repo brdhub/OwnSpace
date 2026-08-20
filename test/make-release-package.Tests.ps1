@@ -44,4 +44,28 @@ Describe "OwnSpace release artifacts" {
     ($offlineEntries -join "`n") | Should Match 'OwnSpace-v3.1.0-update.zip'
     ($offlineEntries -join "`n") | Should Match 'offline-update-ownspace.ps1'
   }
+
+  It "upgrades a v2.3 fixture with final artifacts and preserves its data" {
+    $output = Join-Path $TestDrive "rehearsal-dist"
+    $application = Join-Path $TestDrive "old-application"
+    New-Item -ItemType Directory -Path (Join-Path $application "data/resume-assets"), (Join-Path $application "src") -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $application "data/ownspace.db") -Value "old-db"
+    Set-Content -LiteralPath (Join-Path $application "data/resume-assets/resume.pdf") -Value "old-pdf"
+    Set-Content -LiteralPath (Join-Path $application ".env.local") -Value "DEEPSEEK_API_KEY=fixture-secret"
+    Set-Content -LiteralPath (Join-Path $application "src/version.txt") -Value "old-code"
+    Set-Content -LiteralPath (Join-Path $application "package.json") -Value '{"name":"ownspace","version":"2.3.0"}'
+    Set-Content -LiteralPath (Join-Path $application "package-lock.json") -Value '{"name":"ownspace","version":"2.3.0"}'
+    New-Item -ItemType File -Path (Join-Path $application "start-ownspace.cmd") | Out-Null
+    Mock Stop-OwnSpaceServerForUpdate {}
+    Mock Invoke-OwnSpacePostInstall {}
+    Mock Invoke-OwnSpaceRollbackStart {}
+    $artifacts = New-OwnSpaceReleaseArtifacts -ProjectRoot $projectRoot -OutputDirectory $output -PublishedAt ([datetime]"2026-08-20T00:00:00Z")
+
+    Invoke-OwnSpaceUpdatePackage -ApplicationRoot $application -ManifestPath $artifacts.Manifest -ArchivePath $artifacts.Archive -Source offline
+
+    (Get-Content -LiteralPath (Join-Path $application "data/ownspace.db") -Raw).Trim() | Should Be "old-db"
+    (Get-Content -LiteralPath (Join-Path $application "data/resume-assets/resume.pdf") -Raw).Trim() | Should Be "old-pdf"
+    (Get-Content -LiteralPath (Join-Path $application ".env.local") -Raw).Trim() | Should Be "DEEPSEEK_API_KEY=fixture-secret"
+    ((Get-Content -LiteralPath (Join-Path $application "package.json") -Raw | ConvertFrom-Json).version) | Should Be "3.1.0"
+  }
 }

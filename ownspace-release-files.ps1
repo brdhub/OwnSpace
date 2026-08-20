@@ -2,6 +2,10 @@ function Get-OwnSpaceManagedDirectories {
   @("drizzle", "public", "scripts", "src")
 }
 
+function Get-OwnSpaceEngineeringConstraintsFileName {
+  [string]::Concat([char]39033, [char]30446, [char]24037, [char]31243, [char]32422, [char]26463, ".md")
+}
+
 function Get-OwnSpaceManagedFiles {
   @(
     "drizzle.config.ts",
@@ -21,7 +25,7 @@ function Get-OwnSpaceManagedFiles {
     "offline-update-ownspace.ps1",
     "tailwind.config.ts",
     "tsconfig.json",
-    "项目工程约束.md"
+    (Get-OwnSpaceEngineeringConstraintsFileName)
   )
 }
 

@@ -1,5 +1,16 @@
 export const appReleases = [
   {
+    version: "3.1",
+    updatedAt: "2026年8月20日",
+    updatedAtIso: "2026-08-20",
+    notes: [
+      "启动时可检查 OwnSpace 官方 GitHub Release，并由用户确认后再升级。",
+      "新增一键离线升级包，方便无法在线检查更新的设备。",
+      "升级前自动备份数据库、简历附件、本机配置与旧程序文件。",
+      "迁移、构建或健康检查失败时自动恢复旧程序和旧数据库。",
+    ],
+  },
+  {
     version: "2.3",
     updatedAt: "2026年8月7日",
     updatedAtIso: "2026-08-07",

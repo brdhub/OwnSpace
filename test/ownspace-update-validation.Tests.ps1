@@ -87,6 +87,7 @@ Describe "OwnSpace update validation" {
   It "allows only HTTPS GitHub asset redirect hosts" {
     Test-OwnSpaceAllowedDownloadUri -Uri ([uri]"https://github.com/brdhub/OwnSpace/releases/download/v3.1.1/update.zip") | Should Be $true
     Test-OwnSpaceAllowedDownloadUri -Uri ([uri]"https://objects.githubusercontent.com/release-asset/file") | Should Be $true
+    Test-OwnSpaceAllowedDownloadUri -Uri ([uri]"https://release-assets.githubusercontent.com/github-production-release-asset/file") | Should Be $true
     { Test-OwnSpaceAllowedDownloadUri -Uri ([uri]"http://github.com/file") } | Should Throw
     { Test-OwnSpaceAllowedDownloadUri -Uri ([uri]"https://evil.example/file") } | Should Throw
   }

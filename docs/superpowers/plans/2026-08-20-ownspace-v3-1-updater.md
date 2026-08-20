@@ -388,7 +388,7 @@ Accept Node `20.16.0 <= x < 21.0.0` or `x >= 22.3.0`, matching `package.json#eng
 
 - [x] **Step 4: Implement GitHub discovery, prompt, and fail-open startup**
 
-Use `https://api.github.com/repos/brdhub/OwnSpace/releases/latest`, `Invoke-RestMethod -TimeoutSec 4`, fixed `OwnSpace-Updater/3.1.0` User-Agent, JSON/asset count limits, and Task 2 exact asset selection. Download selected assets to a GUID temporary directory with `Invoke-WebRequest`; validate their final hosts against `github.com`, `api.github.com`, `objects.githubusercontent.com`, and `github-releases.githubusercontent.com` before Task 3 invocation.
+Use `https://api.github.com/repos/brdhub/OwnSpace/releases/latest`, `Invoke-RestMethod -TimeoutSec 4`, fixed `OwnSpace-Updater/3.1.0` User-Agent, JSON/asset count limits, and Task 2 exact asset selection. Download selected assets to a GUID temporary directory with `Invoke-WebRequest`; validate their final hosts against `github.com`, `api.github.com`, `objects.githubusercontent.com`, `github-releases.githubusercontent.com`, and `release-assets.githubusercontent.com` before Task 3 invocation.
 
 ```powershell
 try {
@@ -571,7 +571,7 @@ git commit -m "build: generate OwnSpace release artifacts"
 - Consumes: all updater and packaging entry points from Tasks 1–6.
 - Produces: a documented v3.1 release candidate and checked plan completion state.
 
-- [ ] **Step 1: Write the failing v3.1 release-history assertion**
+- [x] **Step 1: Write the failing v3.1 release-history assertion**
 
 ```ts
 assert.deepEqual(
@@ -584,13 +584,13 @@ Run: `node.exe node_modules/tsx/dist/cli.mjs --test test/layout/app-version.test
 
 Expected: FAIL because `3.1` is not yet first.
 
-- [ ] **Step 2: Set version 3.1.0 and add release notes**
+- [x] **Step 2: Set version 3.1.0 and add release notes**
 
 Run: `npm.cmd version 3.1.0 --no-git-tag-version`
 
 Add `3.1` to `src/config/app-version.ts` with notes for startup GitHub prompts, one-click offline upgrades, protected local data, and automatic backup/rollback. Keep the release-history current-first invariant.
 
-- [ ] **Step 3: Document installation, upgrades, recovery, and publishing**
+- [x] **Step 3: Document installation, upgrades, recovery, and publishing**
 
 Update README with exact user flows:
 
@@ -603,13 +603,13 @@ Publisher: run make-release-package.cmd, create a GitHub Release tagged v<packag
 
 Document that SHA-256 detects corruption but is not Authenticode signing, updates require HTTPS access to GitHub, and no user data or `.env.local` is included in release packages.
 
-- [ ] **Step 4: Run all PowerShell tests**
+- [x] **Step 4: Run all PowerShell tests**
 
 Run: `powershell.exe -NoProfile -Command "Invoke-Pester test/*.Tests.ps1"`
 
 Expected: all launcher, validation, transaction, offline, and packaging tests PASS.
 
-- [ ] **Step 5: Run all TypeScript tests explicitly**
+- [x] **Step 5: Run all TypeScript tests explicitly**
 
 Run from PowerShell with Node 22 on PATH:
 
@@ -620,7 +620,7 @@ node.exe node_modules\tsx\dist\cli.mjs --test @testFiles
 
 Expected: all discovered tests PASS and the output reports more than zero tests.
 
-- [ ] **Step 6: Run type, lint, build, and diff checks**
+- [x] **Step 6: Run type, lint, build, and diff checks**
 
 Run:
 
@@ -633,7 +633,7 @@ git diff --check
 
 Expected: every command exits 0.
 
-- [ ] **Step 7: Perform a v2.3-to-v3.1 temporary-copy rehearsal**
+- [x] **Step 7: Perform a v2.3-to-v3.1 temporary-copy rehearsal**
 
 Create a temporary old-app fixture containing a v2.3 `package.json`, data marker, resume attachment marker, `.env.local`, and old code marker. Run the generated offline bundle against it with post-install commands pointed at fixture hooks. Verify:
 
@@ -646,13 +646,13 @@ Create a temporary old-app fixture containing a v2.3 `package.json`, data marker
 
 Then force the health hook to fail and verify the same fixture returns to version `2.3.0` with all old markers restored.
 
-- [ ] **Step 8: Generate and inspect final v3.1 artifacts**
+- [x] **Step 8: Generate and inspect final v3.1 artifacts**
 
 Run: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./make-release-package.ps1 -NoPause`
 
 Expected: `dist` contains the v3.1 update ZIP, checksum, manifest, and offline ZIP; archive inspection confirms no protected files.
 
-- [ ] **Step 9: Mark completed checkboxes and commit the release candidate**
+- [x] **Step 9: Mark completed checkboxes and commit the release candidate**
 
 ```bash
 git add -A
