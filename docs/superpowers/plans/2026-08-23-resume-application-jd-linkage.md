@@ -1,6 +1,6 @@
 # Resume Copy and Application JD Linkage Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make every structured resume field easy to copy, persist an optional JD on applications, connect applications to resume JD matching, and expose a non-functional interview-simulator entry for a later iteration.
 
@@ -42,7 +42,7 @@
 - Produces: `applicationFormSchema` output with normalized `jobDescription: string`
 - Consumes: existing `applications` and `resumeOptimizationTasks` tables.
 
-- [ ] **Step 1: Write failing schema and database-contract tests**
+- [x] **Step 1: Write failing schema and database-contract tests**
 
 Add `jobDescription: ""` to `validApplication` and append these tests to `src/features/applications/schemas.test.ts`:
 
@@ -82,7 +82,7 @@ test("application JDs persist and optimization tasks retain snapshots after appl
 });
 ```
 
-- [ ] **Step 2: Run the focused tests and confirm RED**
+- [x] **Step 2: Run the focused tests and confirm RED**
 
 Run:
 
@@ -92,7 +92,7 @@ node.exe node_modules\tsx\dist\cli.mjs --test src/features/applications/schemas.
 
 Expected: FAIL because neither Drizzle table exposes the new columns and `applicationFormSchema` drops `jobDescription`.
 
-- [ ] **Step 3: Implement the minimal schema changes**
+- [x] **Step 3: Implement the minimal schema changes**
 
 Add to `applications` in `src/db/schema.ts`:
 
@@ -118,7 +118,7 @@ applicationId: integer("application_id").references(() => applications.id, { onD
 }),
 ```
 
-- [ ] **Step 4: Generate and inspect the forward migration**
+- [x] **Step 4: Generate and inspect the forward migration**
 
 Run:
 
@@ -134,7 +134,7 @@ ALTER TABLE `resume_optimization_tasks` ADD `application_id` integer REFERENCES 
 CREATE INDEX `resume_optimization_tasks_application_id_idx` ON `resume_optimization_tasks` (`application_id`);
 ```
 
-- [ ] **Step 5: Run focused tests and migration on the local database**
+- [x] **Step 5: Run focused tests and migration on the local database**
 
 Run:
 
@@ -145,7 +145,7 @@ npm.cmd run db:migrate
 
 Expected: tests PASS and migration exits 0 without modifying or deleting existing rows.
 
-- [ ] **Step 6: Commit the data contract**
+- [x] **Step 6: Commit the data contract**
 
 ```powershell
 git add src/db/schema.ts src/features/applications/schemas.ts src/features/applications/schemas.test.ts test/resumes/database.test.ts drizzle
@@ -164,7 +164,7 @@ git commit -m "feat: persist application JDs and resume task links"
 - Produces: application create/update persistence for `jobDescription`.
 - Produces: application-card entry URLs `/resumes?tab=jd&applicationId=<id>` and `/ai-hub?applicationId=<id>#interview-simulator`.
 
-- [ ] **Step 1: Extend action persistence explicitly**
+- [x] **Step 1: Extend action persistence explicitly**
 
 In both `createApplicationAction` and `updateApplicationAction`, set:
 
@@ -174,7 +174,7 @@ jobDescription: parsed.data.jobDescription ?? "",
 
 Keep existing URL/null and notes normalization unchanged. This explicit assignment makes the empty-string storage contract visible even if the form schema changes later.
 
-- [ ] **Step 2: Add the optional JD form field**
+- [x] **Step 2: Add the optional JD form field**
 
 Extend `ApplicationFormInitialValues` with `jobDescription`, then insert this field after `applicationUrl` and before `notes`:
 
@@ -192,7 +192,7 @@ Extend `ApplicationFormInitialValues` with `jobDescription`, then insert this fi
 </div>
 ```
 
-- [ ] **Step 3: Add application-card JD state and links**
+- [x] **Step 3: Add application-card JD state and links**
 
 Import `FileSearch`, `MessagesSquare`, and `FilePlus2` from Lucide. For an application with `application.jobDescription.trim()`:
 
@@ -213,7 +213,7 @@ Add links:
 
 For an application without JD, replace both links with a `补充 JD` button using `FilePlus2` that calls `setEditing(application)`. Do not render the full JD in the card.
 
-- [ ] **Step 4: Run application tests, typecheck, and lint**
+- [x] **Step 4: Run application tests, typecheck, and lint**
 
 Run:
 
@@ -225,7 +225,7 @@ npm.cmd run lint
 
 Expected: all commands exit 0.
 
-- [ ] **Step 5: Commit the application experience**
+- [x] **Step 5: Commit the application experience**
 
 ```powershell
 git add src/features/applications/actions.ts src/features/applications/components/application-form.tsx src/features/applications/components/applications-workspace.tsx
@@ -247,7 +247,7 @@ git commit -m "feat: add reusable JDs to application records"
 - Produces: `<ResumeCopyButton value label />` with local copied/error feedback.
 - Consumes: the existing structured content contract for five resume entry types.
 
-- [ ] **Step 1: Write the failing copy-field contract tests**
+- [x] **Step 1: Write the failing copy-field contract tests**
 
 Create `test/resumes/copy-fields.test.ts` with one literal case per type. The project case must assert exact output:
 
@@ -323,7 +323,7 @@ test("every resume type exposes only its visible non-empty fields", () => {
 });
 ```
 
-- [ ] **Step 2: Run the copy test and confirm RED**
+- [x] **Step 2: Run the copy test and confirm RED**
 
 Run:
 
@@ -333,13 +333,13 @@ node.exe node_modules\tsx\dist\cli.mjs --test test/resumes/copy-fields.test.ts
 
 Expected: FAIL because `copy-fields.ts` does not exist.
 
-- [ ] **Step 3: Implement the pure field builder**
+- [x] **Step 3: Implement the pure field builder**
 
 In `copy-fields.ts`, define a small `field` helper that trims only for emptiness but preserves the original string when returning it. Join list values with `、`, and return a type-specific literal array filtered to non-empty values. Never accept or return `tags`.
 
 The type switch must cover all `ResumeEntryType` values and return the exact fields listed in Step 1. There must be no aggregate field or `copyAll` function.
 
-- [ ] **Step 4: Run the copy test and confirm GREEN**
+- [x] **Step 4: Run the copy test and confirm GREEN**
 
 Run:
 
@@ -349,7 +349,7 @@ node.exe node_modules\tsx\dist\cli.mjs --test test/resumes/copy-fields.test.ts
 
 Expected: all copy-field tests PASS.
 
-- [ ] **Step 5: Implement the focused clipboard control**
+- [x] **Step 5: Implement the focused clipboard control**
 
 Create `resume-copy-button.tsx` as a client component. Required behavior:
 
@@ -368,7 +368,7 @@ async function copyValue() {
 
 Render an outline/ghost-sized button with a `Copy` icon. Accessible labels are `复制${label}`, `已复制${label}`, and `${label}复制失败，请手动选择`. Reset feedback to idle after 1.6 seconds and clear the timer on unmount.
 
-- [ ] **Step 6: Refactor the detail dialog to consume copy fields**
+- [x] **Step 6: Refactor the detail dialog to consume copy fields**
 
 Call `getResumeCopyFields(entry)` once. Keep the current visual grouping and type-specific hierarchy, but place the matching `ResumeCopyButton` beside every rendered title/value/section. Give the actual content text `select-text` so a clipboard failure still permits manual selection.
 
@@ -383,7 +383,7 @@ tags section remains unchanged and has no copy control
 footer keeps only Close and Edit Entry
 ```
 
-- [ ] **Step 7: Run focused and full resume tests**
+- [x] **Step 7: Run focused and full resume tests**
 
 Run:
 
@@ -396,7 +396,7 @@ npm.cmd run lint
 
 Expected: all commands exit 0.
 
-- [ ] **Step 8: Commit field-level copying**
+- [x] **Step 8: Commit field-level copying**
 
 ```powershell
 git add src/features/resumes/copy-fields.ts src/features/resumes/components/resume-copy-button.tsx src/features/resumes/components/resume-entry-detail.tsx test/resumes/copy-fields.test.ts
@@ -416,7 +416,7 @@ git commit -m "feat: make resume entry fields easy to copy"
 - Produces: `JdTaskView.applicationId: number | null`.
 - Consumes: Task 1’s `resumeOptimizationTasks.applicationId` and `applications.jobDescription`.
 
-- [ ] **Step 1: Write failing JD task-link schema tests**
+- [x] **Step 1: Write failing JD task-link schema tests**
 
 Append to `test/resumes/schema.test.ts`:
 
@@ -429,7 +429,7 @@ test("accepts only a positive optional application source for JD matching", () =
 });
 ```
 
-- [ ] **Step 2: Run the schema test and confirm RED**
+- [x] **Step 2: Run the schema test and confirm RED**
 
 Run:
 
@@ -439,7 +439,7 @@ node.exe node_modules\tsx\dist\cli.mjs --test test/resumes/schema.test.ts
 
 Expected: FAIL because the strict desired output does not yet contain a coerced positive `applicationId`.
 
-- [ ] **Step 3: Extend the task input contract**
+- [x] **Step 3: Extend the task input contract**
 
 Add to `runJdRecommendationSchema`:
 
@@ -450,7 +450,7 @@ applicationId: z.preprocess(
 ),
 ```
 
-- [ ] **Step 4: Validate application ownership in the Server Action**
+- [x] **Step 4: Validate application ownership in the Server Action**
 
 In `runJdRecommendationAction`, when creating a new task with `applicationId`:
 
@@ -466,7 +466,7 @@ if (!linkedApplication || !linkedApplication.jobDescription.trim()) {
 
 Write `applicationId` into the insert. When retrying an existing task, select its stored `applicationId`; reject a submitted non-empty ID that differs from the stored source. Do not overwrite the source association during retries.
 
-- [ ] **Step 5: Return the association in workspace queries**
+- [x] **Step 5: Return the association in workspace queries**
 
 Add to `JdTaskView`:
 
@@ -476,7 +476,7 @@ applicationId: number | null;
 
 Map `task.applicationId` into every task view returned by `getResumeWorkspaceData`.
 
-- [ ] **Step 6: Run resume schema tests, typecheck, and lint**
+- [x] **Step 6: Run resume schema tests, typecheck, and lint**
 
 Run:
 
@@ -488,7 +488,7 @@ npm.cmd run lint
 
 Expected: all commands exit 0.
 
-- [ ] **Step 7: Commit persistent task linkage**
+- [x] **Step 7: Commit persistent task linkage**
 
 ```powershell
 git add src/features/resumes/schema.ts src/features/resumes/optimization-actions.ts src/features/resumes/queries.ts test/resumes/schema.test.ts
@@ -512,7 +512,7 @@ git commit -m "feat: link resume JD tasks to applications"
 - Produces: `resolveJdImportState(tasks, context): { activeTaskId: number | null; targetRole: string; jdText: string }`.
 - Consumes: `JdTaskView.applicationId` from Task 4.
 
-- [ ] **Step 1: Write failing import-state tests**
+- [x] **Step 1: Write failing import-state tests**
 
 Create `test/resumes/jd-import.test.ts` with hand-authored task objects and assert:
 
@@ -535,7 +535,7 @@ test("prefills a new task when the application has no linked history", () => {
 });
 ```
 
-- [ ] **Step 2: Run the import test and confirm RED**
+- [x] **Step 2: Run the import test and confirm RED**
 
 Run:
 
@@ -545,7 +545,7 @@ node.exe node_modules\tsx\dist\cli.mjs --test test/resumes/jd-import.test.ts
 
 Expected: FAIL because `jd-import.ts` does not exist.
 
-- [ ] **Step 3: Implement the shared context type and pure import resolver**
+- [x] **Step 3: Implement the shared context type and pure import resolver**
 
 Create `src/features/applications/jd-context.ts`:
 
@@ -577,7 +577,7 @@ export function resolveJdImportState(
 }
 ```
 
-- [ ] **Step 4: Run the import tests and confirm GREEN**
+- [x] **Step 4: Run the import tests and confirm GREEN**
 
 Run:
 
@@ -587,7 +587,7 @@ node.exe node_modules\tsx\dist\cli.mjs --test test/resumes/jd-import.test.ts
 
 Expected: all tests PASS.
 
-- [ ] **Step 5: Add the server-only application context query**
+- [x] **Step 5: Add the server-only application context query**
 
 In `src/features/applications/queries.ts`, add:
 
@@ -604,7 +604,7 @@ export async function getApplicationJdContext(applicationId: number): Promise<Ap
 }
 ```
 
-- [ ] **Step 6: Parse resume-page context on the server**
+- [x] **Step 6: Parse resume-page context on the server**
 
 Change `src/app/resumes/page.tsx` to accept `searchParams: Promise<{ tab?: string; applicationId?: string }>`.
 
@@ -614,7 +614,7 @@ Change `src/app/resumes/page.tsx` to accept `searchParams: Promise<{ tab?: strin
 - Pass `initialTab`, `applicationContext`, and an import error string to `ResumeWorkspace`.
 - Distinguish malformed/not-found/empty-JD with a generic user message: `未找到可导入的投递 JD，请返回投递记录补充后重试。`
 
-- [ ] **Step 7: Initialize the workspace and JD form from context**
+- [x] **Step 7: Initialize the workspace and JD form from context**
 
 Add props to `ResumeWorkspace` and initialize `workspaceTab` from `initialTab`. Pass application context into `JdMatchingWorkspace`.
 
@@ -627,7 +627,7 @@ In `JdMatchingWorkspace`:
 - selecting `新建匹配` while an import context exists resets to the application role/JD rather than empty strings;
 - selecting an existing task always loads that task’s own snapshot.
 
-- [ ] **Step 8: Run import/resume tests, typecheck, and lint**
+- [x] **Step 8: Run import/resume tests, typecheck, and lint**
 
 Run:
 
@@ -639,7 +639,7 @@ npm.cmd run lint
 
 Expected: all commands exit 0.
 
-- [ ] **Step 9: Commit the JD import flow**
+- [x] **Step 9: Commit the JD import flow**
 
 ```powershell
 git add src/features/applications/queries.ts src/features/applications/jd-context.ts src/features/resumes/jd-import.ts test/resumes/jd-import.test.ts src/app/resumes/page.tsx src/features/resumes/components/resume-workspace.tsx src/features/resumes/components/jd-matching-workspace.tsx
@@ -659,7 +659,7 @@ git commit -m "feat: import application JDs into resume matching"
 - Produces: a read-only `#interview-simulator` section with optional company/role context.
 - Does not produce or call any AI interface.
 
-- [ ] **Step 1: Add a safe summary query for the placeholder**
+- [x] **Step 1: Add a safe summary query for the placeholder**
 
 Add this type to `src/features/applications/jd-context.ts`, then add a query that does not require a non-empty JD:
 
@@ -676,7 +676,7 @@ export async function getApplicationAiContext(applicationId: number): Promise<Ap
 }
 ```
 
-- [ ] **Step 2: Build the placeholder component**
+- [x] **Step 2: Build the placeholder component**
 
 Create a server-compatible presentational component with `id="interview-simulator"`. It receives:
 
@@ -699,11 +699,11 @@ Status badge/button: 规划中（disabled, no form, no link, no client effect）
 
 Do not accept JD text or resume entries as props.
 
-- [ ] **Step 3: Parse AI-hub query context on the server**
+- [x] **Step 3: Parse AI-hub query context on the server**
 
 Change `src/app/ai-hub/page.tsx` to accept `searchParams: Promise<{ applicationId?: string }>` and safely parse a positive integer. Query only valid IDs, render `InterviewSimulatorEntry` before the existing external-tool groups, and leave every existing external link unchanged.
 
-- [ ] **Step 4: Verify the placeholder has no external behavior**
+- [x] **Step 4: Verify the placeholder has no external behavior**
 
 Run:
 
@@ -715,7 +715,7 @@ npm.cmd run lint
 
 Expected: `rg` returns no new network/clipboard/open calls in the placeholder; typecheck and lint exit 0.
 
-- [ ] **Step 5: Commit the future interview entry**
+- [x] **Step 5: Commit the future interview entry**
 
 ```powershell
 git add src/features/ai-hub/components/interview-simulator-entry.tsx src/app/ai-hub/page.tsx src/features/applications/jd-context.ts src/features/applications/queries.ts
@@ -732,7 +732,7 @@ git commit -m "feat: reserve an interview simulator entry"
 - Consumes: all Tasks 1–6.
 - Produces: verified user instructions and completed plan state.
 
-- [ ] **Step 1: Document the user workflow**
+- [x] **Step 1: Document the user workflow**
 
 Add a concise README section that says:
 
@@ -744,7 +744,7 @@ Add a concise README section that says:
 投递记录中的“面试模拟”当前是下一阶段功能入口，不会发送 JD 或简历数据。
 ```
 
-- [ ] **Step 2: Run every TypeScript test explicitly**
+- [x] **Step 2: Run every TypeScript test explicitly**
 
 Run with a compatible Node runtime on PATH:
 
@@ -756,7 +756,7 @@ node.exe node_modules\tsx\dist\cli.mjs --test @testFiles
 
 Expected: more than zero tests run and every test passes.
 
-- [ ] **Step 3: Run all PowerShell release/update tests**
+- [x] **Step 3: Run all PowerShell release/update tests**
 
 Run:
 
@@ -767,7 +767,7 @@ if ($result.FailedCount -gt 0) { exit 1 }
 
 Expected: every PowerShell test passes.
 
-- [ ] **Step 4: Run type, lint, build, migration, and diff checks**
+- [x] **Step 4: Run type, lint, build, migration, and diff checks**
 
 Run:
 
@@ -781,7 +781,7 @@ git diff --check
 
 Expected: every command exits 0. If the sandbox blocks Next.js child processes with `EPERM`, rerun the same build outside the sandbox with the approved compatible Node runtime; do not treat an environment error as a product failure.
 
-- [ ] **Step 5: Inspect the migration and final diff against the spec**
+- [x] **Step 5: Inspect the migration and final diff against the spec**
 
 Confirm all of the following:
 
@@ -795,7 +795,7 @@ No interview-simulator data table
 Application deletion leaves JD tasks intact through ON DELETE SET NULL
 ```
 
-- [ ] **Step 6: Mark plan checkboxes and commit the completed iteration**
+- [x] **Step 6: Mark plan checkboxes and commit the completed iteration**
 
 ```powershell
 git add README.md docs/superpowers/plans/2026-08-23-resume-application-jd-linkage.md
