@@ -23,7 +23,7 @@ export default async function ResumesPage({ searchParams }: ResumesPageProps) {
     ? await getApplicationJdContext(requestedApplicationId)
     : null;
   const applicationContextError = params.applicationId && !applicationContext
-    ? "未找到对应投递，或该投递尚未填写岗位描述。"
+    ? "未找到可导入的投递 JD，请返回投递记录补充后重试。"
     : undefined;
 
   return (
