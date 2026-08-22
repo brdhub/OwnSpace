@@ -12,6 +12,7 @@ const validApplication = {
   appliedDate: "2026-08-04",
   interviewTime: "",
   applicationUrl: "https://example.com/apply",
+  jobDescription: "",
   notes: "",
 };
 
@@ -22,4 +23,16 @@ test("coerces a positive opportunity association from form data", () => {
 
 test("rejects a non-positive opportunity association", () => {
   assert.equal(applicationFormSchema.safeParse({ ...validApplication, opportunityId: "0" }).success, false);
+});
+
+test("accepts an empty or complete optional job description", () => {
+  assert.equal(applicationFormSchema.parse({ ...validApplication, jobDescription: "" }).jobDescription, "");
+  assert.equal(
+    applicationFormSchema.parse({ ...validApplication, jobDescription: "  负责 AI Agent 平台开发  " }).jobDescription,
+    "负责 AI Agent 平台开发",
+  );
+  assert.equal(
+    applicationFormSchema.safeParse({ ...validApplication, jobDescription: "岗".repeat(20_001) }).success,
+    false,
+  );
 });

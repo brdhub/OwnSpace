@@ -27,6 +27,7 @@ export const applicationFormSchema = z.object({
       .refine((value) => value.startsWith("http://") || value.startsWith("https://"), "网址需要以 http:// 或 https:// 开头")
       .optional(),
   ),
+  jobDescription: z.string().trim().max(20_000, "岗位描述不要超过 20000 个字符").optional().default(""),
   notes: z.string().trim().max(1000, "备注不要超过 1000 个字符").optional().default(""),
 });
 

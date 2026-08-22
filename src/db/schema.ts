@@ -60,6 +60,7 @@ export const applications = sqliteTable("applications", {
   appliedDate: text("applied_date").notNull(),
   interviewTime: text("interview_time"),
   applicationUrl: text("application_url"),
+  jobDescription: text("job_description").notNull().default(""),
   notes: text("notes").notNull().default(""),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -265,17 +266,24 @@ export const resumeEntryCandidates = sqliteTable(
   }),
 );
 
-export const resumeOptimizationTasks = sqliteTable("resume_optimization_tasks", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  jdSource: text("jd_source", { enum: optimizationTaskSources }).notNull(),
-  jdImageStorageKey: text("jd_image_storage_key"),
-  jdText: text("jd_text").notNull().default(""),
-  targetRole: text("target_role").notNull(),
-  status: text("status", { enum: optimizationTaskStatuses }).notNull().default("draft"),
-  aiOutputJson: text("ai_output_json"),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+export const resumeOptimizationTasks = sqliteTable(
+  "resume_optimization_tasks",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    applicationId: integer("application_id").references(() => applications.id, { onDelete: "set null" }),
+    jdSource: text("jd_source", { enum: optimizationTaskSources }).notNull(),
+    jdImageStorageKey: text("jd_image_storage_key"),
+    jdText: text("jd_text").notNull().default(""),
+    targetRole: text("target_role").notNull(),
+    status: text("status", { enum: optimizationTaskStatuses }).notNull().default("draft"),
+    aiOutputJson: text("ai_output_json"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    applicationIndex: index("resume_optimization_tasks_application_id_idx").on(table.applicationId),
+  }),
+);
 
 export const resumeOptimizationMaterials = sqliteTable(
   "resume_optimization_materials",
