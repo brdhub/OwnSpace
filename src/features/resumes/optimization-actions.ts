@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import {
+  applications,
   resumeEntries,
   resumeOptimizationMaterials,
   resumeOptimizationSuggestions,
@@ -50,11 +51,17 @@ export async function runJdRecommendationAction(
   const timestamp = now();
   let taskId = parsed.data.taskId;
   if (taskId) {
-    const existingTask = db.select({ id: resumeOptimizationTasks.id })
+    const existingTask = db.select({
+      id: resumeOptimizationTasks.id,
+      applicationId: resumeOptimizationTasks.applicationId,
+    })
       .from(resumeOptimizationTasks)
       .where(eq(resumeOptimizationTasks.id, taskId))
       .get();
     if (!existingTask) return { success: false, message: "未找到要重试的 JD 匹配任务。" };
+    if (parsed.data.applicationId !== undefined && parsed.data.applicationId !== existingTask.applicationId) {
+      return { success: false, message: "JD 匹配任务的来源投递不一致，请重新进入投递记录。" };
+    }
     db.update(resumeOptimizationTasks).set({
       jdSource: "text",
       jdImageStorageKey: null,
@@ -65,7 +72,17 @@ export async function runJdRecommendationAction(
       updatedAt: timestamp,
     }).where(eq(resumeOptimizationTasks.id, taskId)).run();
   } else {
+    if (parsed.data.applicationId !== undefined) {
+      const linkedApplication = db.select({
+        id: applications.id,
+        jobDescription: applications.jobDescription,
+      }).from(applications).where(eq(applications.id, parsed.data.applicationId)).get();
+      if (!linkedApplication || !linkedApplication.jobDescription.trim()) {
+        return { success: false, message: "对应投递不存在或尚未填写岗位描述。" };
+      }
+    }
     taskId = db.insert(resumeOptimizationTasks).values({
+      applicationId: parsed.data.applicationId ?? null,
       jdSource: "text",
       jdText: parsed.data.jdText,
       targetRole: parsed.data.targetRole,

@@ -136,6 +136,13 @@ test("requires a target role and confirmed JD for AI recommendations", () => {
   assert.equal(runJdRecommendationSchema.safeParse({ targetRole: "产品经理", jdText: "" }).success, false);
 });
 
+test("accepts only a positive optional application source for JD matching", () => {
+  const base = { targetRole: "后端开发实习生", jdText: "负责服务端研发" };
+  assert.equal(runJdRecommendationSchema.parse({ ...base, applicationId: "8" }).applicationId, 8);
+  assert.equal(runJdRecommendationSchema.parse(base).applicationId, undefined);
+  assert.equal(runJdRecommendationSchema.safeParse({ ...base, applicationId: "0" }).success, false);
+});
+
 test("parses unique selected entry IDs", () => {
   const result = saveJdSelectionSchema.safeParse({ taskId: "3", selectedEntryIdsJson: "[4,7]" });
   assert.equal(result.success, true);

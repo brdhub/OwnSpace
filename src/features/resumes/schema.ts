@@ -161,6 +161,10 @@ export const resumeCandidateIdSchema = z.object({
 
 export const runJdRecommendationSchema = z.object({
   taskId: z.coerce.number().int().positive().optional(),
+  applicationId: z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    z.coerce.number().int().positive().optional(),
+  ),
   targetRole: z.string().trim().min(1).max(120),
   jdText: z.string().trim().min(1).max(20_000),
 });

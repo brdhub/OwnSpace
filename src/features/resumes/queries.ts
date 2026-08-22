@@ -37,6 +37,7 @@ export type ResumeWorkspaceData = {
 
 export type JdTaskView = {
   id: number;
+  applicationId: number | null;
   targetRole: string;
   jdText: string;
   status: ResumeOptimizationTask["status"];
@@ -164,6 +165,7 @@ export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {
         && !hasCompleteRecommendationCoverage(recommendations, entries.map((entry) => entry.id));
       return {
         id: task.id,
+        applicationId: task.applicationId,
         targetRole: task.targetRole,
         jdText: task.jdText,
         status: incompleteResult ? "failed" as const : task.status,
