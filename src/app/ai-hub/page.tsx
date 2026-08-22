@@ -2,11 +2,33 @@
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { aiToolGroups } from "@/config/ai-tools";
+import { InterviewSimulatorEntry } from "@/features/ai-hub/components/interview-simulator-entry";
+import { getApplicationAiContext } from "@/features/applications/queries";
 
-export default function AiHubPage() {
+type AiHubPageProps = {
+  searchParams: Promise<{ applicationId?: string }>;
+};
+
+function parseApplicationId(value?: string) {
+  if (!value || !/^\d+$/.test(value)) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+export default async function AiHubPage({ searchParams }: AiHubPageProps) {
+  const params = await searchParams;
+  const requestedApplicationId = parseApplicationId(params.applicationId);
+  const applicationContext = requestedApplicationId
+    ? await getApplicationAiContext(requestedApplicationId)
+    : null;
+  const applicationContextError = params.applicationId && !applicationContext
+    ? "未找到对应投递，请从投递记录重新进入。"
+    : undefined;
+
   return (
     <PageContainer title="AI 工具">
       <div className="space-y-6">
+        <InterviewSimulatorEntry context={applicationContext} contextError={applicationContextError} />
         {aiToolGroups.map((group) => (
           <section key={group.title} className="space-y-3">
             <h2 className="text-sm font-semibold text-muted-foreground">{group.title}</h2>

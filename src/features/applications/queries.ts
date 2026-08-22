@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { applications } from "@/db/schema";
 import { internshipTypes, type InternshipType } from "@/features/applications/constants";
 import { getInterviewCountsByApplication } from "@/features/interviews/queries";
-import type { ApplicationJdContext } from "@/features/applications/jd-context";
+import type { ApplicationAiContext, ApplicationJdContext } from "@/features/applications/jd-context";
 
 type ApplicationFilters = {
   query?: string;
@@ -74,4 +74,12 @@ export async function getApplicationJdContext(applicationId: number): Promise<Ap
 
   if (!row?.jobDescription.trim()) return null;
   return row;
+}
+
+export async function getApplicationAiContext(applicationId: number): Promise<ApplicationAiContext | null> {
+  return await db.select({
+    id: applications.id,
+    company: applications.company,
+    role: applications.role,
+  }).from(applications).where(eq(applications.id, applicationId)).get() ?? null;
 }
