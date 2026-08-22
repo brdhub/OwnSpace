@@ -14,7 +14,9 @@ import {
 import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ResumeCopyButton } from "@/features/resumes/components/resume-copy-button";
 import { resumeEntryTypeLabels, type ResumeEntryType } from "@/features/resumes/constants";
+import { getResumeCopyFields, type ResumeCopyField } from "@/features/resumes/copy-fields";
 import type { ResumeEntryView } from "@/features/resumes/queries";
 
 const entryVisuals: Record<ResumeEntryType, { icon: LucideIcon; accent: string; iconStyle: string }> = {
@@ -45,29 +47,31 @@ const entryVisuals: Record<ResumeEntryType, { icon: LucideIcon; accent: string; 
   },
 };
 
-function stringValue(content: Record<string, unknown>, key: string) {
-  return typeof content[key] === "string" ? content[key] : "";
-}
-
 function listValue(content: Record<string, unknown>, key: string) {
   return Array.isArray(content[key]) ? content[key].filter((item): item is string => typeof item === "string" && Boolean(item)) : [];
 }
 
-function FactCard({ label, value }: { label: string; value: string }) {
-  if (!value) return null;
+function FactCard({ field }: { field?: ResumeCopyField }) {
+  if (!field) return null;
   return (
-    <div className="rounded-xl border border-border/70 bg-background/80 px-4 py-3 shadow-sm">
-      <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-      <p className="mt-1.5 text-sm font-semibold leading-6 text-foreground">{value}</p>
+    <div className="relative rounded-xl border border-border/70 bg-background/80 px-4 py-3 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">{field.label}</p>
+        <ResumeCopyButton label={field.label} value={field.value} />
+      </div>
+      <p className="mt-1.5 select-text text-sm font-semibold leading-6 text-foreground">{field.value}</p>
     </div>
   );
 }
 
-function PillList({ label, items }: { label: string; items: string[] }) {
-  if (!items.length) return null;
+function PillList({ field, items }: { field?: ResumeCopyField; items: string[] }) {
+  if (!field || !items.length) return null;
   return (
     <div>
-      <p className="mb-2 text-xs font-medium text-muted-foreground">{label}</p>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs font-medium text-muted-foreground">{field.label}</p>
+        <ResumeCopyButton label={field.label} value={field.value} />
+      </div>
       <div className="flex flex-wrap gap-2">
         {items.map((item) => <Badge key={item} variant="outline" className="rounded-full bg-background/70 px-2.5 py-1">{item}</Badge>)}
       </div>
@@ -75,64 +79,68 @@ function PillList({ label, items }: { label: string; items: string[] }) {
   );
 }
 
-function ContentSection({ title, content }: { title: string; content: string }) {
-  if (!content) return null;
+function ContentSection({ field }: { field?: ResumeCopyField }) {
+  if (!field) return null;
   return (
     <section className="relative pl-5">
       <span className="absolute bottom-1 left-0 top-1 w-0.5 rounded-full bg-primary/25" aria-hidden="true" />
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{content}</p>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-foreground">{field.label}</h3>
+        <ResumeCopyButton label={field.label} value={field.value} />
+      </div>
+      <p className="mt-2 select-text whitespace-pre-wrap text-sm leading-7 text-muted-foreground">{field.value}</p>
     </section>
   );
 }
 
 function EntryBody({ entry }: { entry: ResumeEntryView }) {
   const content = entry.content as Record<string, unknown>;
+  const fields = new Map(getResumeCopyFields(entry).map((field) => [field.key, field]));
 
   switch (entry.type) {
     case "project":
       return (
         <>
           <div className="grid gap-3 sm:grid-cols-2">
-            <FactCard label="项目分类" value={stringValue(content, "projectCategory")} />
+            <FactCard field={fields.get("projectCategory")} />
           </div>
-          <PillList label="技术栈" items={listValue(content, "techStack")} />
-          <ContentSection title="项目内容" content={stringValue(content, "content")} />
+          <PillList field={fields.get("techStack")} items={listValue(content, "techStack")} />
+          <ContentSection field={fields.get("content")} />
         </>
       );
     case "experience":
       return (
         <>
           <div className="grid gap-3 sm:grid-cols-2">
-            <FactCard label="岗位" value={stringValue(content, "position")} />
+            <FactCard field={fields.get("position")} />
           </div>
-          <PillList label="技术栈" items={listValue(content, "techStack")} />
-          <ContentSection title="工作职责" content={stringValue(content, "responsibilities")} />
-          <ContentSection title="工作内容" content={stringValue(content, "workContent")} />
+          <PillList field={fields.get("techStack")} items={listValue(content, "techStack")} />
+          <ContentSection field={fields.get("responsibilities")} />
+          <ContentSection field={fields.get("workContent")} />
         </>
       );
     case "education":
       return (
         <>
           <div className="grid gap-3 sm:grid-cols-3">
-            <FactCard label="学历" value={stringValue(content, "degree")} />
-            <FactCard label="专业" value={stringValue(content, "major")} />
-            <FactCard label="时间" value={stringValue(content, "dateRange")} />
+            <FactCard field={fields.get("degree")} />
+            <FactCard field={fields.get("major")} />
+            <FactCard field={fields.get("dateRange")} />
           </div>
-          <ContentSection title="教育经历" content={stringValue(content, "content")} />
+          <ContentSection field={fields.get("content")} />
         </>
       );
     case "skill":
       return (
         <>
           <div className="grid gap-3 sm:grid-cols-2">
-            <FactCard label="掌握程度" value={stringValue(content, "proficiency")} />
+            <FactCard field={fields.get("proficiency")} />
           </div>
-          <ContentSection title="技能说明" content={stringValue(content, "content")} />
+          <ContentSection field={fields.get("content")} />
         </>
       );
     case "honor":
-      return <FactCard label="奖项 / 等级" value={stringValue(content, "award")} />;
+      return <FactCard field={fields.get("award")} />;
   }
 }
 
@@ -147,6 +155,7 @@ export function ResumeEntryDetail({
 }) {
   const visual = entryVisuals[entry.type];
   const EntryIcon = visual.icon;
+  const titleField = getResumeCopyFields(entry).find((field) => field.key === "title");
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -180,7 +189,10 @@ export function ResumeEntryDetail({
             </div>
             <div className="min-w-0">
               <Badge variant="outline" className="mb-2 rounded-full bg-background/60">{resumeEntryTypeLabels[entry.type]}</Badge>
-              <h2 id="resume-entry-detail-title" className="text-xl font-semibold leading-tight tracking-tight text-foreground sm:text-2xl">{entry.title}</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 id="resume-entry-detail-title" className="select-text text-xl font-semibold leading-tight tracking-tight text-foreground sm:text-2xl">{entry.title}</h2>
+                {titleField ? <ResumeCopyButton label={titleField.label} value={titleField.value} /> : null}
+              </div>
             </div>
           </div>
         </header>
