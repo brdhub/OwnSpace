@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { applications } from "@/db/schema";
 import { internshipTypes, type InternshipType } from "@/features/applications/constants";
 import { getInterviewCountsByApplication } from "@/features/interviews/queries";
+import type { ApplicationJdContext } from "@/features/applications/jd-context";
 
 type ApplicationFilters = {
   query?: string;
@@ -61,4 +62,16 @@ export async function getApplicationStats() {
       count: rows.filter((row) => row.internshipType === internshipType).length,
     })),
   };
+}
+
+export async function getApplicationJdContext(applicationId: number): Promise<ApplicationJdContext | null> {
+  const row = await db.select({
+    id: applications.id,
+    company: applications.company,
+    role: applications.role,
+    jobDescription: applications.jobDescription,
+  }).from(applications).where(eq(applications.id, applicationId)).get();
+
+  if (!row?.jobDescription.trim()) return null;
+  return row;
 }

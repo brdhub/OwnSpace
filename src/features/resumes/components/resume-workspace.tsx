@@ -12,15 +12,30 @@ import { ResumeEntryList } from "@/features/resumes/components/resume-entry-list
 import { ResumeCandidateList } from "@/features/resumes/components/resume-candidate-list";
 import { JdMatchingWorkspace } from "@/features/resumes/components/jd-matching-workspace";
 import type { ResumeEntryView, ResumeWorkspaceData } from "@/features/resumes/queries";
+import type { ApplicationJdContext } from "@/features/applications/jd-context";
 
 type DialogKind = "asset" | "entry" | null;
 
-export function ResumeWorkspace({ assets, entries, candidates, jdTasks }: ResumeWorkspaceData) {
+type ResumeWorkspaceProps = ResumeWorkspaceData & {
+  initialTab?: "vault" | "jd";
+  applicationContext?: ApplicationJdContext | null;
+  applicationContextError?: string;
+};
+
+export function ResumeWorkspace({
+  assets,
+  entries,
+  candidates,
+  jdTasks,
+  initialTab = "vault",
+  applicationContext = null,
+  applicationContextError,
+}: ResumeWorkspaceProps) {
   const router = useRouter();
   const [dialogKind, setDialogKind] = useState<DialogKind>(null);
   const [editingEntry, setEditingEntry] = useState<ResumeEntryView>();
   const [viewingEntry, setViewingEntry] = useState<ResumeEntryView>();
-  const [workspaceTab, setWorkspaceTab] = useState<"vault" | "jd">("vault");
+  const [workspaceTab, setWorkspaceTab] = useState<"vault" | "jd">(initialTab);
   const pendingCandidateCounts = candidates.reduce<Record<number, number>>((counts, candidate) => {
     if (candidate.state === "pending") counts[candidate.resumeAssetId] = (counts[candidate.resumeAssetId] ?? 0) + 1;
     return counts;
@@ -69,7 +84,12 @@ export function ResumeWorkspace({ assets, entries, candidates, jdTasks }: Resume
           </div>
           <ResumeEntryList entries={entries} onView={setViewingEntry} onEdit={editEntry} />
         </section>
-      </div> : <JdMatchingWorkspace entries={entries} tasks={jdTasks} />}
+      </div> : <JdMatchingWorkspace
+        entries={entries}
+        tasks={jdTasks}
+        applicationContext={applicationContext}
+        applicationContextError={applicationContextError}
+      />}
 
       {dialogKind ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/20 px-4 py-8" role="presentation">

@@ -17,6 +17,8 @@ import {
   updateOptimizationSuggestionStateAction,
 } from "@/features/resumes/optimization-actions";
 import type { JdTaskView, ResumeEntryView } from "@/features/resumes/queries";
+import type { ApplicationJdContext } from "@/features/applications/jd-context";
+import { resolveJdImportState } from "@/features/resumes/jd-import";
 
 function formatContentValue(value: string | string[]) {
   return Array.isArray(value) ? value.join("、") : value || "—";
@@ -25,12 +27,30 @@ function formatContentValue(value: string | string[]) {
 const initialState: ResumeActionState = { success: false };
 const levelLabels = { high: "高匹配", medium: "中匹配", low: "低匹配" } as const;
 
-export function JdMatchingWorkspace({ entries, tasks }: { entries: ResumeEntryView[]; tasks: JdTaskView[] }) {
+type JdMatchingWorkspaceProps = {
+  entries: ResumeEntryView[];
+  tasks: JdTaskView[];
+  applicationContext?: ApplicationJdContext | null;
+  applicationContextError?: string;
+};
+
+export function JdMatchingWorkspace({
+  entries,
+  tasks,
+  applicationContext = null,
+  applicationContextError,
+}: JdMatchingWorkspaceProps) {
   const router = useRouter();
-  const [activeTaskId, setActiveTaskId] = useState<number | null>(tasks[0]?.id ?? null);
+  const importedState = resolveJdImportState(tasks, applicationContext);
+  const initialImportState = applicationContext ? importedState : {
+    activeTaskId: tasks[0]?.id ?? null,
+    targetRole: tasks[0]?.targetRole ?? "",
+    jdText: tasks[0]?.jdText ?? "",
+  };
+  const [activeTaskId, setActiveTaskId] = useState<number | null>(initialImportState.activeTaskId);
   const activeTask = tasks.find((task) => task.id === activeTaskId) ?? null;
-  const [targetRole, setTargetRole] = useState(activeTask?.targetRole ?? "");
-  const [jdText, setJdText] = useState(activeTask?.jdText ?? "");
+  const [targetRole, setTargetRole] = useState(initialImportState.targetRole);
+  const [jdText, setJdText] = useState(initialImportState.jdText);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set(
     activeTask ? reconcileSelectedEntryIds(activeTask.recommendations, activeTask.selectedEntryIds) : [],
   ));
@@ -72,8 +92,8 @@ export function JdMatchingWorkspace({ entries, tasks }: { entries: ResumeEntryVi
   const selectTask = (taskId: number | null) => {
     setActiveTaskId(taskId);
     if (taskId === null) {
-      setTargetRole("");
-      setJdText("");
+      setTargetRole(applicationContext?.role ?? "");
+      setJdText(applicationContext?.jobDescription ?? "");
       setSelectedIds(new Set());
     }
   };
@@ -81,6 +101,14 @@ export function JdMatchingWorkspace({ entries, tasks }: { entries: ResumeEntryVi
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
       <section className="rounded-lg border border-border bg-card p-5">
+        {applicationContext ? (
+          <div className="mb-4 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+            <p className="font-medium text-foreground">来自 {applicationContext.company} · {applicationContext.role}</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">已带入投递记录中的 JD；只有点击“AI 推荐条目”后才会发起分析。</p>
+          </div>
+        ) : applicationContextError ? (
+          <p className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{applicationContextError}</p>
+        ) : null}
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="font-semibold text-foreground">JD 匹配</h2>
@@ -98,6 +126,7 @@ export function JdMatchingWorkspace({ entries, tasks }: { entries: ResumeEntryVi
         ) : null}
         <form action={runAction} className="space-y-4">
           {activeTask?.status === "failed" ? <input type="hidden" name="taskId" value={activeTask.id} /> : null}
+          {!activeTask && applicationContext ? <input type="hidden" name="applicationId" value={applicationContext.id} /> : null}
           <label className="block text-sm">
             <span className="mb-1 block">目标岗位</span>
             <Input name="targetRole" value={targetRole} onChange={(event) => setTargetRole(event.target.value)} placeholder="例如：产品经理" />
