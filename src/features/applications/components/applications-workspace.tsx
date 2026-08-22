@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit3, ExternalLink, Image as ImageIcon, Plus, Search, Trash2 } from "lucide-react";
+import { Edit3, ExternalLink, FilePlus2, FileSearch, Image as ImageIcon, MessagesSquare, Plus, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useMemo, useOptimistic, useState, useTransition } from "react";
@@ -246,6 +246,7 @@ export function ApplicationsWorkspace({
             const internshipMeta = internshipTypeMeta[application.internshipType];
             const companySize = companySizeMeta[application.companySize];
             const statusMeta = applicationStatusMeta[application.status];
+            const hasJobDescription = Boolean(application.jobDescription.trim());
 
             return (
               <Card key={application.id} className={cn("relative overflow-hidden border", statusMeta.cardClassName)}>
@@ -260,6 +261,27 @@ export function ApplicationsWorkspace({
                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                       <span className="rounded-md border border-border bg-background px-2 py-1">{internshipMeta.label}</span>
                       <span className="rounded-md border border-border bg-background px-2 py-1">{companySize.label}</span>
+                      {hasJobDescription ? <span className="rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-primary">已有 JD</span> : null}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {hasJobDescription ? (
+                        <>
+                          <Button asChild size="sm" variant="outline">
+                            <Link href={`/resumes?tab=jd&applicationId=${application.id}`}>
+                              <FileSearch className="h-3.5 w-3.5" />JD 匹配
+                            </Link>
+                          </Button>
+                          <Button asChild size="sm" variant="ghost">
+                            <Link href={`/ai-hub?applicationId=${application.id}#interview-simulator`}>
+                              <MessagesSquare className="h-3.5 w-3.5" />面试模拟
+                            </Link>
+                          </Button>
+                        </>
+                      ) : (
+                        <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(application)}>
+                          <FilePlus2 className="h-3.5 w-3.5" />补充 JD
+                        </Button>
+                      )}
                     </div>
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -302,7 +324,7 @@ export function ApplicationsWorkspace({
 
       {editing || isCreating ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/20 px-4 py-8">
-          <div className="w-full max-w-2xl rounded-lg border border-border bg-card p-5 shadow-lg">
+          <div className="max-h-full w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-lg">
             <h2 className="mb-4 text-lg font-semibold">{modalTitle}</h2>
             <ApplicationForm application={editing ?? undefined} onDone={closeForm} />
           </div>

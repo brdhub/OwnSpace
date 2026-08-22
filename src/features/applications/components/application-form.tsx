@@ -31,6 +31,7 @@ export type ApplicationInitialValues = Partial<
     | "companySize"
     | "appliedDate"
     | "applicationUrl"
+    | "jobDescription"
     | "notes"
   >
 >;
@@ -139,6 +140,17 @@ export function ApplicationForm({ application, initialValues, onDone }: Applicat
         <Label htmlFor="applicationUrl">投递网址</Label>
         <Input id="applicationUrl" name="applicationUrl" type="url" defaultValue={application?.applicationUrl ?? initialValues?.applicationUrl ?? ""} />
         <FieldError errors={state.errors?.applicationUrl} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="jobDescription">岗位描述（可选）</Label>
+        <Textarea
+          id="jobDescription"
+          name="jobDescription"
+          rows={9}
+          defaultValue={application?.jobDescription ?? initialValues?.jobDescription ?? ""}
+          placeholder="粘贴完整 JD，之后可以直接用于简历匹配"
+        />
+        <FieldError errors={state.errors?.jobDescription} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="notes">备注</Label>

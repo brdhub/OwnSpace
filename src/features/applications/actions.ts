@@ -47,6 +47,7 @@ export async function createApplicationAction(
     ...parsed.data,
     interviewTime: parsed.data.interviewTime ?? null,
     applicationUrl: parsed.data.applicationUrl ?? null,
+    jobDescription: parsed.data.jobDescription ?? "",
     notes: parsed.data.notes ?? "",
     createdAt: now(),
     updatedAt: now(),
@@ -76,6 +77,7 @@ export async function updateApplicationAction(
       ...values,
       interviewTime: values.interviewTime ?? null,
       applicationUrl: values.applicationUrl ?? null,
+      jobDescription: values.jobDescription ?? "",
       notes: values.notes ?? "",
       updatedAt: now(),
     })
