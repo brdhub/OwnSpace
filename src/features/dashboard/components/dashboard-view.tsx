@@ -15,7 +15,9 @@ import { StatusSummary } from "@/features/dashboard/components/status-summary";
 import { TodayJournalCard } from "@/features/dashboard/components/today-journal-card";
 import { TodayStudyCard } from "@/features/dashboard/components/today-study-card";
 import { PlanningSummaryCard } from "@/features/dashboard/components/planning-summary-card";
+import { RecommendedOpportunities } from "@/features/dashboard/components/recommended-opportunities";
 import type { CalendarActivityDay, CalendarInterviewEvent } from "@/features/dashboard/queries";
+import type { RecommendedOpportunity } from "@/features/dashboard/queries";
 import type { StudyCategory } from "@/features/study/constants";
 
 type DashboardViewProps = {
@@ -34,6 +36,7 @@ type DashboardViewProps = {
     latestProgress: PlanningEvent | null;
     hasUserEvents: boolean;
   };
+  recommendedOpportunities: RecommendedOpportunity[];
 };
 
 export function DashboardView({
@@ -45,6 +48,7 @@ export function DashboardView({
   studyProgress,
   today,
   planningSummary,
+  recommendedOpportunities,
 }: DashboardViewProps) {
   const [showCreateApplication, setShowCreateApplication] = useState(false);
   const router = useRouter();
@@ -83,6 +87,8 @@ export function DashboardView({
           </form>
         </div>
       </section>
+
+      <RecommendedOpportunities opportunities={recommendedOpportunities} />
 
       <StatusSummary statusStats={statusStats} internshipTypeStats={internshipTypeStats} />
 

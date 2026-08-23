@@ -34,7 +34,7 @@ npm run dev
 
 旧版本还没有内置升级器，需要最后进行一次离线升级：
 
-1. 解压 `OwnSpace-v3.1.0-offline-updater.zip`；
+1. 解压 `OwnSpace-v3.2.0-offline-updater.zip`；
 2. 双击其中的 `升级 OwnSpace.cmd`；
 3. 如果弹出目录选择器，选择朋友原来的 OwnSpace 文件夹；
 4. 升级器会先备份 `data`、`.env.local` 和旧程序，再迁移数据库、构建并启动 v3.1。

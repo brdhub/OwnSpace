@@ -2,7 +2,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { getApplicationStats } from "@/features/applications/queries";
 import { DashboardView } from "@/features/dashboard/components/dashboard-view";
 import { ensureDueInterviewNotes } from "@/features/dashboard/due-interviews";
-import { getCalendarActivityDays, getInterviewCalendarEvents } from "@/features/dashboard/queries";
+import { getCalendarActivityDays, getInterviewCalendarEvents, getRecommendedOpportunities } from "@/features/dashboard/queries";
 import { getDashboardPlanningSummary } from "@/features/planning/queries";
 import { hasTodayJournalEntry } from "@/features/journal/queries";
 import { getTodayStudyProgress } from "@/features/study/queries";
@@ -14,13 +14,14 @@ export default async function DashboardPage() {
   await ensureDueInterviewNotes();
 
   const today = toDateInputValue();
-  const [applicationStats, calendarEvents, calendarActivityDays, hasJournalEntry, studyProgress, planningSummary] = await Promise.all([
+  const [applicationStats, calendarEvents, calendarActivityDays, hasJournalEntry, studyProgress, planningSummary, recommendedOpportunities] = await Promise.all([
     getApplicationStats(),
     getInterviewCalendarEvents(),
     getCalendarActivityDays(),
     hasTodayJournalEntry(),
     getTodayStudyProgress(),
     getDashboardPlanningSummary(today),
+    getRecommendedOpportunities(),
   ]);
 
   return (
@@ -34,6 +35,7 @@ export default async function DashboardPage() {
         studyProgress={studyProgress}
         today={today}
         planningSummary={planningSummary}
+        recommendedOpportunities={recommendedOpportunities}
       />
     </PageContainer>
   );
