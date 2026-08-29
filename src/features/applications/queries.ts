@@ -1,37 +1,27 @@
-import { and, desc, eq, like, or } from "drizzle-orm";
-import { applicationStatuses, type ApplicationStatus } from "@/config/application-status";
+import { and, desc, eq, inArray, like, or } from "drizzle-orm";
+import { applicationStatuses } from "@/config/application-status";
 import { db } from "@/db";
 import { applications } from "@/db/schema";
-import { internshipTypes, type InternshipType } from "@/features/applications/constants";
+import { internshipTypes } from "@/features/applications/constants";
+import { getApplicationStatusesForFilter, type ResolvedApplicationFilters } from "@/features/applications/filters";
 import { getInterviewCountsByApplication } from "@/features/interviews/queries";
 import type { ApplicationAiContext, ApplicationJdContext } from "@/features/applications/jd-context";
 
-type ApplicationFilters = {
-  query?: string;
-  status?: string;
-  internshipType?: string;
-};
-
-export async function getApplications(filters: ApplicationFilters) {
+export async function getApplications(filters: ResolvedApplicationFilters) {
   const conditions = [];
-  const query = filters.query?.trim();
-  const validStatus = applicationStatuses.includes(filters.status as ApplicationStatus)
-    ? (filters.status as ApplicationStatus)
-    : undefined;
-  const validInternshipType = internshipTypes.includes(filters.internshipType as InternshipType)
-    ? (filters.internshipType as InternshipType)
-    : undefined;
+  const query = filters.query.trim();
+  const includedStatuses = getApplicationStatusesForFilter(filters.status);
 
   if (query) {
     const pattern = `%${query}%`;
     conditions.push(or(like(applications.company, pattern), like(applications.role, pattern)));
   }
 
-  if (validStatus) {
-    conditions.push(eq(applications.status, validStatus));
+  if (includedStatuses) {
+    conditions.push(inArray(applications.status, includedStatuses));
   }
-  if (validInternshipType) {
-    conditions.push(eq(applications.internshipType, validInternshipType));
+  if (filters.internshipType !== "all") {
+    conditions.push(inArray(applications.internshipType, [filters.internshipType]));
   }
 
   const rows = await db

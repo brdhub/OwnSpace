@@ -257,6 +257,17 @@ function Get-OwnSpaceNodeVersion {
   return (& $NodePath --version 2>$null).Trim()
 }
 
+function Test-OwnSpaceNpmRuntime {
+  param([Parameter(Mandatory = $true)][string]$NpmPath)
+
+  try {
+    & $NpmPath --version *> $null
+    return $LASTEXITCODE -eq 0
+  } catch {
+    return $false
+  }
+}
+
 function Find-OwnSpaceNodeRuntime {
   param([Parameter(Mandatory = $true)][string]$ApplicationRoot)
 
@@ -298,7 +309,7 @@ function Find-OwnSpaceNodeRuntime {
     }
     try {
       $version = Get-OwnSpaceNodeVersion -NodePath $candidate.Node
-      if (Test-OwnSpaceSupportedNodeVersion $version) {
+      if ((Test-OwnSpaceSupportedNodeVersion $version) -and (Test-OwnSpaceNpmRuntime -NpmPath $candidate.Npm)) {
         return [pscustomobject]@{ Source=$candidate.Source; Node=$candidate.Node; Npm=$candidate.Npm; Version=$version }
       }
     } catch {

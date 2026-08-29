@@ -19,14 +19,19 @@ import { ApplicationsNavigation } from "@/features/applications/components/appli
 import { ApplicationImageExport } from "@/features/applications/components/application-image-export";
 import { StatusBadge } from "@/features/applications/components/status-badge";
 import { companySizeMeta, internshipTypeMeta, internshipTypes } from "@/features/applications/constants";
+import {
+  defaultApplicationFilters,
+  type ApplicationInternshipTypeFilter,
+  type ApplicationStatusFilter,
+} from "@/features/applications/filters";
 import { formatDate, formatDateTime } from "@/lib/date";
 import { cn } from "@/lib/utils";
 
 type ApplicationsWorkspaceProps = {
   applications: Array<Application & { interviewCount: number }>;
   query?: string;
-  status?: string;
-  internshipType?: string;
+  status?: ApplicationStatusFilter;
+  internshipType?: ApplicationInternshipTypeFilter;
 };
 
 function ApplicationStatusSelect({ id, status, error }: { id: number; status: Application["status"]; error?: string }) {
@@ -62,8 +67,8 @@ function ApplicationStatusSelect({ id, status, error }: { id: number; status: Ap
 export function ApplicationsWorkspace({
   applications,
   query = "",
-  status = "",
-  internshipType = "",
+  status = defaultApplicationFilters.status,
+  internshipType = defaultApplicationFilters.internshipType,
 }: ApplicationsWorkspaceProps) {
   const [editing, setEditing] = useState<Application | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -91,7 +96,7 @@ export function ApplicationsWorkspace({
     return "";
   }, [editing, isCreating]);
 
-  function updateFilter(next: { query?: string; status?: string; internshipType?: string }) {
+  function updateFilter(next: { query?: string; status?: ApplicationStatusFilter; internshipType?: ApplicationInternshipTypeFilter }) {
     const params = new URLSearchParams(searchParams.toString());
     if (next.query !== undefined) {
       const query = next.query.trim();
@@ -192,11 +197,12 @@ export function ApplicationsWorkspace({
             disabled={isNavigating}
             onChange={(event) => {
               if (event.target.value !== status) {
-                updateFilter({ status: event.target.value });
+                updateFilter({ status: event.target.value as ApplicationStatusFilter });
               }
             }}
           >
-            <option value="">全部状态</option>
+            <option value="active">所有未结束</option>
+            <option value="all">全部状态</option>
             {applicationStatuses.map((item) => (
               <option key={item} value={item}>
                 {applicationStatusMeta[item].label}
@@ -212,11 +218,11 @@ export function ApplicationsWorkspace({
             disabled={isNavigating}
             onChange={(event) => {
               if (event.target.value !== internshipType) {
-                updateFilter({ internshipType: event.target.value });
+                updateFilter({ internshipType: event.target.value as ApplicationInternshipTypeFilter });
               }
             }}
           >
-            <option value="">全部类型</option>
+            <option value="all">全部类型</option>
             {internshipTypes.map((item) => (
               <option key={item} value={item}>
                 {internshipTypeMeta[item].label}

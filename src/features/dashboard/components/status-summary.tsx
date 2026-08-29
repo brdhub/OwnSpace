@@ -2,6 +2,7 @@
 import { applicationStatusMeta, type ApplicationStatus } from "@/config/application-status";
 import Link from "next/link";
 import { internshipTypeMeta, type InternshipType } from "@/features/applications/constants";
+import { buildApplicationFiltersHref } from "@/features/applications/filters";
 import { cn } from "@/lib/utils";
 
 type StatusSummaryProps = {
@@ -23,7 +24,7 @@ export function StatusSummary({ statusStats, internshipTypeStats }: StatusSummar
         <div>
           <CardTitle>投递状态概览</CardTitle>
           <Link
-            href="/applications"
+            href={buildApplicationFiltersHref({ status: "all", internshipType: "all" })}
             className="group mt-5 inline-flex items-baseline gap-2 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="text-3xl font-semibold text-foreground transition-colors group-hover:text-primary">{total}</span>
@@ -34,7 +35,7 @@ export function StatusSummary({ statusStats, internshipTypeStats }: StatusSummar
           {internshipTypeStats.map((item) => (
             <Link
               key={item.internshipType}
-              href={`/applications?internshipType=${item.internshipType}`}
+              href={buildApplicationFiltersHref({ status: "all", internshipType: item.internshipType })}
               className={internshipBlockClassName}
             >
               <span
@@ -54,7 +55,7 @@ export function StatusSummary({ statusStats, internshipTypeStats }: StatusSummar
           {statusStats.map((item) => (
             <Link
               key={item.status}
-              href={`/applications?status=${item.status}`}
+              href={buildApplicationFiltersHref({ status: item.status, internshipType: "all" })}
               className={cn(interactiveBlockClassName, applicationStatusMeta[item.status].summaryClassName)}
             >
               <span className="text-sm font-medium">{applicationStatusMeta[item.status].label}</span>

@@ -1,6 +1,7 @@
 import { PageContainer } from "@/components/layout/page-container";
 import { getApplications } from "@/features/applications/queries";
 import { ApplicationsWorkspace } from "@/features/applications/components/applications-workspace";
+import { resolveApplicationFilters } from "@/features/applications/filters";
 
 export const dynamic = "force-dynamic";
 
@@ -13,16 +14,16 @@ type ApplicationsPageProps = {
 };
 
 export default async function ApplicationsPage({ searchParams }: ApplicationsPageProps) {
-  const params = await searchParams;
-  const rows = await getApplications(params);
+  const filters = resolveApplicationFilters(await searchParams);
+  const rows = await getApplications(filters);
 
   return (
     <PageContainer title="投递记录">
       <ApplicationsWorkspace
         applications={rows}
-        query={params.query}
-        status={params.status}
-        internshipType={params.internshipType}
+        query={filters.query}
+        status={filters.status}
+        internshipType={filters.internshipType}
       />
     </PageContainer>
   );

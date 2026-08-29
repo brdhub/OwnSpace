@@ -1,5 +1,15 @@
 export const appReleases = [
   {
+    version: "3.3",
+    updatedAt: "2026年8月30日",
+    updatedAtIso: "2026-08-30",
+    notes: [
+      "投递记录默认聚焦秋招中尚未结束的机会，并支持随时切换查看全部状态和类型。",
+      "首页投递概览跳转会保留明确的筛选范围，避免页面默认条件改变统计含义。",
+      "启动器会跳过无法正常运行 npm 的 Node.js 环境，优先选择完整可用的运行时。",
+    ],
+  },
+  {
     version: "3.2",
     updatedAt: "2026年8月23日",
     updatedAtIso: "2026-08-23",
