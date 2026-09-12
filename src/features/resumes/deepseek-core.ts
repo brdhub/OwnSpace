@@ -1,6 +1,6 @@
+import { extractCandidatesWithGraph } from "./workflow/candidate-graph";
 import { z } from "zod";
 import {
-  generatedCandidateResponseSchema,
   entryOptimizationResponseSchema,
   type EntryOptimizationSuggestion,
   jdRecommendationResponseSchema,
@@ -15,6 +15,7 @@ import {
   type DeepSeekMessage,
   type JdPromptInput,
   type OptimizationPromptInput,
+  type OptimizationFeedback,
 } from "@/features/resumes/prompts";
 
 export type DeepSeekErrorCode =
@@ -25,7 +26,7 @@ export type DeepSeekErrorCode =
 
 function isOptimizableNarrativeField(type: OptimizationPromptInput["materials"][number]["type"], key: string) {
   switch (type) {
-    case "project": return key === "content";
+    case "project": return key === "content" || key === "responsibilities";
     case "experience": return key === "responsibilities" || key === "workContent";
     case "education": return key === "content";
     case "skill": return key === "content";
@@ -55,9 +56,10 @@ export type DeepSeekEnvironment = Readonly<Record<string, string | undefined>>;
 
 const providerEnvelopeSchema = z.object({
   choices: z.array(z.object({
-    finish_reason: z.string(),
+    finish_reason: z.enum(["stop", "length"]),
     message: z.object({ content: z.string().nullable() }),
-  })).min(1),
+  })).length(1),
+  usage: z.unknown().optional(),
 });
 
 export function getDeepSeekConfig(env: DeepSeekEnvironment = process.env): DeepSeekConfig {
@@ -76,7 +78,7 @@ export function getDeepSeekConfig(env: DeepSeekEnvironment = process.env): DeepS
   return { apiKey, baseUrl, model, timeoutMs };
 }
 
-type DeepSeekDependencies = {
+export type DeepSeekDependencies = {
   fetch?: typeof fetch;
   env?: DeepSeekEnvironment;
 };
@@ -85,11 +87,25 @@ type DeepSeekRequestOptions = {
   maxTokens?: number;
 };
 
-async function requestJson(
+type ProviderResult = {
+  output: unknown;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  contentError?: string;
+};
+
+const tokenCountSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+
+function usageCount(value: unknown): number | null {
+  const parsed = tokenCountSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
+async function requestCompletion(
   messages: DeepSeekMessage[],
   dependencies: DeepSeekDependencies = {},
   options: DeepSeekRequestOptions = {},
-): Promise<unknown> {
+): Promise<ProviderResult> {
   const config = getDeepSeekConfig(dependencies.env);
   const fetcher = dependencies.fetch ?? fetch;
   let response: Response;
@@ -128,35 +144,66 @@ async function requestJson(
   }
 
   const choice = envelope.choices[0];
+  const usage = z.object({ prompt_tokens: z.unknown(), completion_tokens: z.unknown() }).safeParse(envelope.usage);
+  const counts = {
+    inputTokens: usageCount(usage.success ? usage.data.prompt_tokens : undefined),
+    outputTokens: usageCount(usage.success ? usage.data.completion_tokens : undefined),
+  };
+  const invalidContent = (code: string, message: string): ProviderResult => ({
+    output: { diagnostic: { code, message }, raw: (choice.message.content ?? "").slice(0, 8_000) },
+    ...counts,
+    contentError: message,
+  });
   if (choice.finish_reason === "length") {
-    throw new DeepSeekError("invalid_response", "DeepSeek 返回内容不完整，请重试。", true);
+    return invalidContent("truncated_content", "DeepSeek 返回内容不完整，请重试。");
   }
   if (!choice.message.content?.trim()) {
-    throw new DeepSeekError("invalid_response", "DeepSeek 未返回可用内容，请重试。", true);
+    return invalidContent("empty_content", "DeepSeek 未返回可用内容，请重试。");
   }
 
   try {
-    return JSON.parse(choice.message.content);
+    return { output: JSON.parse(choice.message.content), ...counts };
   } catch {
-    throw new DeepSeekError("invalid_response", "DeepSeek 返回的 JSON 无法解析，请重试。", true);
+    return invalidContent("invalid_json", "DeepSeek 返回的 JSON 无法解析，请重试。");
   }
+}
+
+async function requestJson(
+  messages: DeepSeekMessage[],
+  dependencies: DeepSeekDependencies = {},
+  options: DeepSeekRequestOptions = {},
+): Promise<unknown> {
+  const result = await requestCompletion(messages, dependencies, options);
+  if (result.contentError) throw new DeepSeekError("invalid_response", result.contentError, true);
+  return result.output;
+}
+
+export async function requestOptimizationOnce(
+  input: OptimizationPromptInput,
+  feedback?: OptimizationFeedback,
+  dependencies: DeepSeekDependencies = {},
+): Promise<{ output: unknown; inputTokens: number | null; outputTokens: number | null }> {
+  const { output, inputTokens, outputTokens } = await requestCompletion(buildEntryOptimizationPrompt(input, feedback), dependencies);
+  return { output, inputTokens, outputTokens };
 }
 
 export async function generateEntryCandidates(
   input: CandidatePromptInput,
   dependencies: DeepSeekDependencies = {},
 ): Promise<GeneratedCandidate[]> {
-  const allowedIds = new Set(input.formalEntries.map((entry) => entry.id));
-  const messages = buildCandidatePrompt(input);
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const raw = await requestJson(messages, dependencies, { maxTokens: 8_000 });
-    const parsed = generatedCandidateResponseSchema.safeParse(raw);
-    if (!parsed.success) continue;
-    if (parsed.data.candidates.some((candidate) => candidate.similarEntryId !== null && !allowedIds.has(candidate.similarEntryId))) continue;
-    return parsed.data.candidates;
-  }
+  return (await generateEntryCandidatesDetailed(input, dependencies)).candidates;
+}
 
-  throw new DeepSeekError("invalid_response", "DeepSeek 连续返回了不符合要求的候选条目，请重试。", true);
+export async function generateEntryCandidatesDetailed(
+  input: CandidatePromptInput,
+  dependencies: DeepSeekDependencies = {},
+) {
+  const result = await extractCandidatesWithGraph(input, feedback =>
+    requestCompletion(buildCandidatePrompt(input, feedback), dependencies, { maxTokens: 8_000 }));
+  if (!result.candidates.length && result.issues.length) {
+    throw new DeepSeekError("invalid_response", `PDF 文本已读取，但候选整理未通过校验：${result.issues.slice(0, 3).map(issue => `${issue.path}：${issue.message}`).join("；")}。已有候选已保留。`, true);
+  }
+  return result;
 }
 
 export async function recommendEntriesForJd(

@@ -266,6 +266,17 @@ export const resumeEntryCandidates = sqliteTable(
   }),
 );
 
+export const resumeEntryMerges = sqliteTable("resume_entry_merges", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  entryId: integer("entry_id").notNull().references(() => resumeEntries.id, { onDelete: "cascade" }),
+  candidateId: integer("candidate_id").references(() => resumeEntryCandidates.id, { onDelete: "set null" }),
+  beforeJson: text("before_json").notNull(),
+  afterJson: text("after_json").notNull(),
+  sourceExcerpt: text("source_excerpt").notNull(),
+  createdAt: text("created_at").notNull(),
+  undoneAt: text("undone_at"),
+});
+
 export const resumeOptimizationTasks = sqliteTable(
   "resume_optimization_tasks",
   {
@@ -277,6 +288,7 @@ export const resumeOptimizationTasks = sqliteTable(
     targetRole: text("target_role").notNull(),
     status: text("status", { enum: optimizationTaskStatuses }).notNull().default("draft"),
     aiOutputJson: text("ai_output_json"),
+    inputRevision: integer("input_revision").notNull().default(1),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
@@ -309,6 +321,7 @@ export const resumeOptimizationSuggestions = sqliteTable(
     proposedText: text("proposed_text").notNull(),
     rationale: text("rationale").notNull(),
     state: text("state", { enum: optimizationSuggestionStates }).notNull().default("pending"),
+    inputRevision: integer("input_revision").notNull().default(0),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
@@ -316,12 +329,67 @@ export const resumeOptimizationSuggestions = sqliteTable(
   (table) => ({ materialTaskOwnership: foreignKey({ columns: [table.materialId, table.taskId], foreignColumns: [resumeOptimizationMaterials.id, resumeOptimizationMaterials.taskId], name: "resume_optimization_suggestions_material_task_fk" }).onDelete("cascade") }),
 );
 
-export const resumeVersions = sqliteTable("resume_versions", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  taskId: integer("task_id").notNull().references(() => resumeOptimizationTasks.id, { onDelete: "cascade" }),
-  acceptedContentJson: text("accepted_content_json").notNull(),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+export const resumeDrafts = sqliteTable("resume_drafts", {
+  taskId: integer("task_id")
+    .primaryKey()
+    .references(() => resumeOptimizationTasks.id, { onDelete: "cascade" }),
+  contentJson: text("content_json").notNull(),
+  schemaVersion: integer("schema_version").notNull().default(1),
+  revision: integer("revision").notNull().default(1),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const resumeVersions = sqliteTable(
+  "resume_versions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    taskId: integer("task_id").references(() => resumeOptimizationTasks.id, { onDelete: "set null" }),
+    name: text("name").notNull().default("未命名版本"),
+    versionNumber: integer("version_number").notNull().default(1),
+    schemaVersion: integer("schema_version").notNull().default(1),
+    templateVersion: text("template_version").notNull().default("classic-v1"),
+    idempotencyKey: text("idempotency_key"),
+    acceptedContentJson: text("accepted_content_json").notNull(),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    idempotencyKeyUnique: uniqueIndex("resume_versions_idempotency_key_unique").on(table.idempotencyKey),
+    taskVersionUnique: uniqueIndex("resume_versions_task_version_unique").on(table.taskId, table.versionNumber),
+  }),
+);
+
+export const resumeAiRuns = sqliteTable(
+  "resume_ai_runs",
+  {
+    id: text("id").primaryKey(),
+    taskId: integer("task_id").references(() => resumeOptimizationTasks.id, { onDelete: "set null" }),
+    operation: text("operation", { enum: ["recommendation", "optimization"] }).notNull(),
+    inputRevision: integer("input_revision").notNull(),
+    inputHash: text("input_hash").notNull(),
+    status: text("status", { enum: ["running", "waiting", "completed", "failed", "interrupted", "superseded"] }).notNull(),
+    stage: text("stage").notNull().default("prepare"),
+    executionId: text("execution_id"),
+    heartbeatAt: text("heartbeat_at"),
+    inputJson: text("input_json"),
+    targetMaterialId: integer("target_material_id"),
+    callCount: integer("call_count").notNull().default(0),
+    durationMs: integer("duration_ms").notNull().default(0),
+    fallbackCount: integer("fallback_count").notNull().default(0),
+    checkpointsCleared: integer("checkpoints_cleared", { mode: "boolean" }).notNull().default(false),
+    model: text("model"),
+    promptVersion: text("prompt_version").notNull(),
+    startedAt: text("started_at").notNull(),
+    finishedAt: text("finished_at"),
+    errorCode: text("error_code"),
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
+  },
+  (table) => ({
+    taskOperationRunningUnique: uniqueIndex("resume_ai_runs_task_operation_running_unique")
+      .on(table.taskId, table.operation)
+      .where(sql`${table.status} = 'running'`),
+  }),
+);
 
 
 export type Application = typeof applications.$inferSelect;
@@ -343,6 +411,8 @@ export type ResumeEntryCandidate = typeof resumeEntryCandidates.$inferSelect;
 export type ResumeOptimizationTask = typeof resumeOptimizationTasks.$inferSelect;
 export type ResumeOptimizationMaterial = typeof resumeOptimizationMaterials.$inferSelect;
 export type ResumeOptimizationSuggestion = typeof resumeOptimizationSuggestions.$inferSelect;
+export type ResumeDraft = typeof resumeDrafts.$inferSelect;
 export type ResumeVersion = typeof resumeVersions.$inferSelect;
+export type ResumeAiRun = typeof resumeAiRuns.$inferSelect;
 
 

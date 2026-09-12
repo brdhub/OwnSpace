@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+.resume-paper { padding: 2rem; overflow-wrap: anywhere; font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif; }
+@media print {
+  @page { size: A4; margin: 16mm 18mm; }
+  html, body { background: white !important; color: black; }
+  .resume-print-root { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+  .resume-paper { padding: 0; box-shadow: none; border: 0; }
+  .resume-section-heading, .resume-item-heading { break-after: avoid; }
+  .resume-paper p { orphans: 2; widows: 2; }
+  .resume-paper a { color: inherit; }
+}
+
 :root {
   --background: 48 33% 98%;
   --foreground: 222 28% 15%;

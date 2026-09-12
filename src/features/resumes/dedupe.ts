@@ -16,13 +16,21 @@ function normalizeText(value: string) {
   return value.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("zh-CN");
 }
 
-function normalizeContent(content: ResumeEntryContent) {
+function normalizeValue(value: unknown): unknown {
+  if (typeof value === "string") return normalizeText(value);
+  if (Array.isArray(value)) return value.map(normalizeValue);
+  if (value && typeof value === "object") return normalizeContent(value);
+  return value;
+}
+
+function normalizeContent(content: object): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(content)
+      .filter(([key, value]) => !((key === "responsibilities" && value === "") || (key === "projects" && Array.isArray(value) && !value.length)))
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, value]) => [
         normalizeText(key),
-        Array.isArray(value) ? value.map(normalizeText) : normalizeText(value),
+        normalizeValue(value),
       ]),
   );
 }

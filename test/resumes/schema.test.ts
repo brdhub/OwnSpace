@@ -155,7 +155,8 @@ test("validates description optimization task IDs", () => {
   assert.equal(runEntryOptimizationSchema.safeParse({ taskId: "0" }).success, false);
 });
 
-test("only accepts terminal optimization suggestion states", () => {
+test("allows undoing optimization review but rejects unknown states", () => {
   assert.equal(updateOptimizationSuggestionStateSchema.safeParse({ suggestionId: "2", state: "accepted" }).success, true);
-  assert.equal(updateOptimizationSuggestionStateSchema.safeParse({ suggestionId: "2", state: "pending" }).success, false);
+  assert.equal(updateOptimizationSuggestionStateSchema.safeParse({ suggestionId: "2", state: "pending" }).success, true);
+  assert.equal(updateOptimizationSuggestionStateSchema.safeParse({ suggestionId: "2", state: "deleted" }).success, false);
 });

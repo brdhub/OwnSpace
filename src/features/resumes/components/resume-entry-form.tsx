@@ -15,6 +15,9 @@ import {
 } from "@/features/resumes/constants";
 import type { ResumeEntryView } from "@/features/resumes/queries";
 
+import { ExperienceProjectFields } from "./experience-project-fields";
+import { getExperienceProjects } from "../experience-projects";
+
 const initialState: ResumeActionState = { success: false };
 
 const titleLabels: Record<ResumeEntryType, string> = {
@@ -44,6 +47,8 @@ export function ResumeEntryForm({ entry, onDone }: { entry?: ResumeEntryView; on
   const [state, formAction, pending] = useActionState(action, initialState);
   const [type, setType] = useState<ResumeEntryType>(entry?.type ?? "project");
 
+  const [projects, setProjects] = useState(() => getExperienceProjects(entry?.content ?? {}));
+
   useEffect(() => {
     if (state.success) onDone();
   }, [onDone, state.success]);
@@ -72,6 +77,7 @@ export function ResumeEntryForm({ entry, onDone }: { entry?: ResumeEntryView; on
         </div>
         <TechStackField entry={entry} />
         <ContentField entry={entry} label="项目内容" />
+        <label className="block space-y-2 text-sm"><span>个人职责</span><Textarea name="responsibilities" defaultValue={contentValue(entry, "responsibilities")} maxLength={4000} rows={3} /></label>
       </> : null}
 
       {type === "experience" ? <>
@@ -88,6 +94,11 @@ export function ResumeEntryForm({ entry, onDone }: { entry?: ResumeEntryView; on
           <Label htmlFor="resume-entry-work-content">工作内容</Label>
           <Textarea id="resume-entry-work-content" name="workContent" defaultValue={contentValue(entry, "workContent")} maxLength={4_000} rows={4} />
         </div>
+      </> : null}
+
+      {type === "experience" ? <>
+        <ExperienceProjectFields projects={projects} onChange={setProjects} />
+        {projects.map((project, index) => <div key={index}><input type="hidden" name="projectName" value={project.name} /><input type="hidden" name="projectContent" value={project.content} /><input type="hidden" name="projectResponsibilities" value={project.responsibilities} /></div>)}
       </> : null}
 
       {type === "education" ? <>

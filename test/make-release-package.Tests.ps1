@@ -66,6 +66,6 @@ Describe "OwnSpace release artifacts" {
     (Get-Content -LiteralPath (Join-Path $application "data/ownspace.db") -Raw).Trim() | Should Be "old-db"
     (Get-Content -LiteralPath (Join-Path $application "data/resume-assets/resume.pdf") -Raw).Trim() | Should Be "old-pdf"
     (Get-Content -LiteralPath (Join-Path $application ".env.local") -Raw).Trim() | Should Be "DEEPSEEK_API_KEY=fixture-secret"
-    ((Get-Content -LiteralPath (Join-Path $application "package.json") -Raw | ConvertFrom-Json).version) | Should Be "3.1.0"
+    ((Get-Content -LiteralPath (Join-Path $application "package.json") -Raw | ConvertFrom-Json).version) | Should Be ((Get-Content -LiteralPath (Join-Path $projectRoot "package.json") -Raw | ConvertFrom-Json).version)
   }
 }

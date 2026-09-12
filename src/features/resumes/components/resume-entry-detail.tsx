@@ -106,6 +106,7 @@ function EntryBody({ entry }: { entry: ResumeEntryView }) {
           </div>
           <PillList field={fields.get("techStack")} items={listValue(content, "techStack")} />
           <ContentSection field={fields.get("content")} />
+          <ContentSection field={fields.get("responsibilities")} />
         </>
       );
     case "experience":
@@ -117,6 +118,7 @@ function EntryBody({ entry }: { entry: ResumeEntryView }) {
           <PillList field={fields.get("techStack")} items={listValue(content, "techStack")} />
           <ContentSection field={fields.get("responsibilities")} />
           <ContentSection field={fields.get("workContent")} />
+          <ContentSection field={fields.get("projects")} />
         </>
       );
     case "education":

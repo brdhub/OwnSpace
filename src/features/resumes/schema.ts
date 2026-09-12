@@ -21,13 +21,22 @@ export const projectEntryContentSchema = z.object({
   projectCategory: shortTextSchema,
   techStack: techStackSchema,
   content: textSchema,
+  responsibilities: textSchema.optional(),
 }).strict();
+
+export const experienceProjectSchema = z.object({
+  name: titleSchema,
+  content: textSchema,
+  responsibilities: textSchema,
+}).strict();
+export type ExperienceProject = z.infer<typeof experienceProjectSchema>;
 
 export const experienceEntryContentSchema = z.object({
   position: shortTextSchema,
   techStack: techStackSchema,
   responsibilities: textSchema,
   workContent: textSchema,
+  projects: z.array(experienceProjectSchema).max(20).optional(),
 }).strict();
 
 export const educationEntryContentSchema = z.object({
@@ -192,7 +201,7 @@ export const runEntryOptimizationSchema = z.object({
 
 export const updateOptimizationSuggestionStateSchema = z.object({
   suggestionId: z.coerce.number().int().positive(),
-  state: z.enum(["accepted", "ignored"]),
+  state: z.enum(["pending", "accepted", "ignored"]),
 });
 
 const resumeAssetSnapshotSchema = z.object({

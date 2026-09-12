@@ -3,6 +3,7 @@
 import { FileUp, Plus } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from 'next/link';
 import { Button } from "@/components/ui/button";
 import { ResumeAssetList } from "@/features/resumes/components/resume-asset-list";
 import { ResumeAssetUploadForm } from "@/features/resumes/components/resume-asset-upload-form";
@@ -58,6 +59,7 @@ export function ResumeWorkspace({
       <div className="mb-5 flex gap-2 border-b border-border pb-3">
         <Button type="button" size="sm" variant={workspaceTab === "vault" ? "default" : "ghost"} onClick={() => setWorkspaceTab("vault")}>简历仓库</Button>
         <Button type="button" size="sm" variant={workspaceTab === "jd" ? "default" : "ghost"} onClick={() => setWorkspaceTab("jd")}>JD 匹配</Button>
+        <Link href="/resumes/versions" className="ml-auto self-center text-sm text-primary underline">已保存简历</Link>
       </div>
       {workspaceTab === "vault" ? <div className="grid gap-4 xl:grid-cols-2">
         <section className="rounded-lg border border-border bg-card p-4">

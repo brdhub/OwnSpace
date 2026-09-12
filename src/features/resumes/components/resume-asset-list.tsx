@@ -45,6 +45,7 @@ export function ResumeAssetList({ assets, pendingCandidateCounts }: { assets: Re
               {asset.entryExtractionStatus === "processing" ? <p className="mt-1 text-xs text-muted-foreground">AI 正在生成候选条目…</p> : null}
               {asset.entryExtractionStatus === "completed" && asset.entryExtractedAt ? <p className="mt-1 text-xs text-muted-foreground">候选最近生成于 {new Date(asset.entryExtractedAt).toLocaleString("zh-CN")}</p> : null}
               {asset.entryExtractionStatus === "failed" ? <p className="mt-1 text-xs text-destructive">{asset.entryExtractionError || "AI 候选生成失败，可重试。"}</p> : null}
+              {asset.entryExtractionStatus === "completed" && asset.entryExtractionError ? <p className="mt-1 text-xs text-amber-700">{asset.entryExtractionError}</p> : null}
               {asset.parseStatus === "parsed" && asset.extractedText.trim() ? (
                 <ResumeGenerateButton assetId={asset.id} pendingCount={pendingCandidateCounts[asset.id] ?? 0} />
               ) : null}

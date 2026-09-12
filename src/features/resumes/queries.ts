@@ -6,14 +6,17 @@ import {
   resumeAssets,
   resumeEntries,
   resumeEntryCandidates,
+  resumeEntryMerges,
   resumeOptimizationMaterials,
   resumeOptimizationSuggestions,
   resumeOptimizationTasks,
+  resumeAiRuns,
   type ResumeAsset,
   type ResumeOptimizationTask,
 } from "@/db/schema";
 import { jdRecommendationResponseSchema, type JdRecommendation } from "@/features/resumes/ai-schema";
 import { hasCompleteRecommendationCoverage } from "@/features/resumes/jd-selection";
+import { createTaskService } from './workflow/task-service';
 import {
   parseResumeEntryContent,
   parseResumeEntryTags,
@@ -37,6 +40,9 @@ export type ResumeWorkspaceData = {
 
 export type JdTaskView = {
   id: number;
+  inputRevision?: number;
+  running?: boolean;
+  optimizationRun?: {id:string;status:string;stage:string;callCount:number;inputTokens:number|null;outputTokens:number|null;durationMs:number;fallbackCount:number;canResume:boolean;canClear:boolean;errorCode:string|null};
   applicationId: number | null;
   targetRole: string;
   jdText: string;
@@ -57,6 +63,7 @@ export type OptimizationSuggestionView = {
   proposedContent: Record<string, string | string[]>;
   rationale: string;
   state: "pending" | "accepted" | "ignored";
+  stale?: boolean;
 };
 
 export type ResumeCandidateView = {
@@ -69,6 +76,9 @@ export type ResumeCandidateView = {
   sourceExcerpt: string;
   duplicateEntryId: number | null;
   duplicateEntryTitle: string | null;
+  duplicateEntry?: ResumeEntryView;
+  duplicateEntrySnapshot?: string;
+  mergeId?: number;
   duplicateKind: "none" | "exact" | "similar";
   state: "pending" | "accepted" | "ignored";
   createdAt: string;
@@ -84,6 +94,8 @@ function parseSuggestionContent(contentJson: string) {
 }
 
 export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {
+  createTaskService(db).expireRuns();
+  const aiRuns = db.select().from(resumeAiRuns).orderBy(desc(resumeAiRuns.startedAt)).all();
   const [assets, entries, candidates, jdTasks, optimizationMaterials, optimizationSuggestions] = await Promise.all([
     db.select().from(resumeAssets).orderBy(desc(resumeAssets.updatedAt)),
     db.select().from(resumeEntries).orderBy(desc(resumeEntries.updatedAt)),
@@ -94,6 +106,7 @@ export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {
   ]);
 
   const entryTitleById = new Map(entries.map((entry) => [entry.id, entry.title]));
+  const merges = db.select().from(resumeEntryMerges).orderBy(desc(resumeEntryMerges.id)).all();
   const selectedEntryIdsByTask = new Map<number, number[]>();
   const materialTitleById = new Map<number, string>();
   optimizationMaterials.forEach((material) => {
@@ -119,6 +132,7 @@ export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {
       proposedContent: parseSuggestionContent(suggestion.proposedText),
       rationale: suggestion.rationale,
       state: suggestion.state,
+      stale: suggestion.inputRevision !== jdTasks.find(task => task.id === suggestion.taskId)?.inputRevision,
     });
     suggestionsByTask.set(suggestion.taskId, taskSuggestions);
   });
@@ -144,6 +158,15 @@ export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {
       sourceExcerpt: candidate.sourceExcerpt,
       duplicateEntryId: candidate.duplicateEntryId,
       duplicateEntryTitle: candidate.duplicateEntryId ? entryTitleById.get(candidate.duplicateEntryId) ?? null : null,
+      ...(() => {
+        const entry = entries.find(entry => entry.id === candidate.duplicateEntryId);
+        const merge = merges.find(merge => merge.candidateId === candidate.id && !merge.undoneAt);
+        return {
+          duplicateEntry: entry ? { ...entry, content: parseResumeEntryContent(entry.contentJson), tags: parseResumeEntryTags(entry.tagsJson) } : undefined,
+          duplicateEntrySnapshot: entry ? JSON.stringify(entry) : undefined,
+          mergeId: merge?.id,
+        };
+      })(),
       duplicateKind: candidate.duplicateKind,
       state: candidate.state,
       createdAt: candidate.createdAt,
@@ -165,6 +188,13 @@ export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {
         && !hasCompleteRecommendationCoverage(recommendations, entries.map((entry) => entry.id));
       return {
         id: task.id,
+        inputRevision: task.inputRevision,
+        running: aiRuns.some(run => run.taskId === task.id && run.status === 'running'),
+        optimizationRun: (()=>{
+          const run=aiRuns.find(run=>run.taskId===task.id&&run.operation==='optimization'&&run.promptVersion==='resume-recovery-v1');
+          if(!run)return undefined;
+          return {id:run.id,status:run.status,stage:run.stage,callCount:run.callCount,inputTokens:run.inputTokens,outputTokens:run.outputTokens,durationMs:run.durationMs,fallbackCount:run.fallbackCount,errorCode:run.errorCode,canResume:!run.checkpointsCleared&&run.inputRevision===task.inputRevision&&['waiting','failed','interrupted'].includes(run.status),canClear:!run.checkpointsCleared&&!['waiting','running'].includes(run.status)};
+        })(),
         applicationId: task.applicationId,
         targetRole: task.targetRole,
         jdText: task.jdText,
@@ -172,7 +202,12 @@ export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {
         recommendations,
         selectedEntryIds: selectedEntryIdsByTask.get(task.id) ?? [],
         suggestions: suggestionsByTask.get(task.id) ?? [],
-        error: incompleteResult ? "此历史任务的匹配结果不完整，请重新运行 AI 推荐。" : storedError,
+        error: (() => {
+          const recent = aiRuns.find(run => run.taskId === task.id && run.inputRevision === task.inputRevision);
+          if (recent?.status === 'interrupted') return '上次 AI 请求已中断，可手动重试；已保存的内容不受影响。';
+          if (recent?.status === 'failed') return '上次 AI 请求失败，可手动重试；已保存的内容不受影响。';
+          return incompleteResult ? "此历史任务的匹配结果不完整，可重新推荐或继续手动选材。" : storedError;
+        })(),
         createdAt: task.createdAt,
         updatedAt: task.updatedAt,
       };

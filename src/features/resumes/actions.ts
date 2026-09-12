@@ -48,9 +48,9 @@ function entryPayload(formData: FormData) {
 
   switch (type) {
     case "project":
-      return { ...common, content: { projectCategory: textValue(formData, "projectCategory"), techStack: splitList(formData.get("techStack")), content: textValue(formData, "content") } };
+      return { ...common, content: { projectCategory: textValue(formData, "projectCategory"), techStack: splitList(formData.get("techStack")), content: textValue(formData, "content"), responsibilities: textValue(formData, "responsibilities") } };
     case "experience":
-      return { ...common, content: { position: textValue(formData, "position"), techStack: splitList(formData.get("techStack")), responsibilities: textValue(formData, "responsibilities"), workContent: textValue(formData, "workContent") } };
+      return { ...common, content: { position: textValue(formData, "position"), techStack: splitList(formData.get("techStack")), responsibilities: textValue(formData, "responsibilities"), workContent: textValue(formData, "workContent"), projects: formData.getAll("projectName").map((name, index) => ({ name: name.toString(), content: formData.getAll("projectContent")[index]?.toString() ?? "", responsibilities: formData.getAll("projectResponsibilities")[index]?.toString() ?? "" })) } };
     case "education":
       return { ...common, content: { degree: textValue(formData, "degree"), major: textValue(formData, "major"), dateRange: textValue(formData, "dateRange"), content: textValue(formData, "content") } };
     case "skill":

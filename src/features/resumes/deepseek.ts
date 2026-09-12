@@ -3,6 +3,7 @@ import "server-only";
 export {
   DeepSeekError,
   generateEntryCandidates,
+  generateEntryCandidatesDetailed,
   getDeepSeekConfig,
   optimizeEntriesForJd,
   recommendEntriesForJd,

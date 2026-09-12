@@ -1,6 +1,8 @@
 import type { ResumeEntryType } from "@/features/resumes/constants";
 import type { ResumeEntryContent } from "@/features/resumes/schema";
 
+import { formatExperienceProjects, getExperienceProjects } from "./experience-projects";
+
 export type ResumeCopyEntry = {
   type: ResumeEntryType;
   title: string;
@@ -42,6 +44,7 @@ export function getResumeCopyFields(entry: ResumeCopyEntry): ResumeCopyField[] {
         field("projectCategory", "项目分类", stringValue(entry.content, "projectCategory")),
         field("techStack", "技术栈", listValue(entry.content, "techStack").join("、")),
         field("content", "项目内容", stringValue(entry.content, "content"), true),
+        field("responsibilities", "个人职责", stringValue(entry.content, "responsibilities"), true),
       ]);
     case "experience":
       return compact([
@@ -50,6 +53,7 @@ export function getResumeCopyFields(entry: ResumeCopyEntry): ResumeCopyField[] {
         field("techStack", "技术栈", listValue(entry.content, "techStack").join("、")),
         field("responsibilities", "工作职责", stringValue(entry.content, "responsibilities"), true),
         field("workContent", "工作内容", stringValue(entry.content, "workContent"), true),
+        field("projects", "负责项目", formatExperienceProjects(getExperienceProjects(entry.content)), true),
       ]);
     case "education":
       return compact([

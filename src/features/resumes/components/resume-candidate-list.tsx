@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   acceptResumeCandidateAction,
   ignoreResumeCandidateAction,
+  mergeResumeCandidateAction,
+  undoResumeCandidateMergeAction,
 } from "@/features/resumes/candidate-actions";
 import {
   resumeEntryTypeLabels,
@@ -19,6 +21,11 @@ import {
 } from "@/features/resumes/constants";
 import type { ResumeCandidateView } from "@/features/resumes/queries";
 import type { ResumeEntryContent } from "@/features/resumes/schema";
+
+import { ExperienceProjectFields } from "./experience-project-fields";
+import { getExperienceProjects } from "../experience-projects";
+import type { ExperienceProject } from "../schema";
+import { CandidateMergePanel } from './candidate-merge-panel';
 
 function emptyContent(type: ResumeEntryType): ResumeEntryContent {
   switch (type) {
@@ -36,7 +43,9 @@ function CandidateCard({ candidate }: { candidate: ResumeCandidateView }) {
   const [title, setTitle] = useState(candidate.title);
   const [content, setContent] = useState<ResumeEntryContent>(candidate.content);
   const [tags, setTags] = useState(candidate.tags);
-  const [state, action, pending] = useActionState(acceptResumeCandidateAction, { success: false });
+  const [merging, setMerging] = useState(false);
+  const [mergeReady, setMergeReady] = useState(false);
+  const [state, action, pending] = useActionState(merging ? mergeResumeCandidateAction : acceptResumeCandidateAction, { success: false });
   const contentJson = useMemo(() => JSON.stringify(content), [content]);
   const effectiveTags = type === "skill" ? [title.trim()].filter(Boolean) : type === "honor" ? [] : tags;
   const validationError = Object.values(state.errors ?? {}).flat()[0];
@@ -46,12 +55,13 @@ function CandidateCard({ candidate }: { candidate: ResumeCandidateView }) {
   }, [router, state]);
 
   function selectType(nextType: ResumeEntryType) {
+    setMerging(false);
     setType(nextType);
     setContent(emptyContent(nextType));
     if (nextType === "honor") setTags([]);
   }
 
-  function setText(key: string, value: string | string[]) {
+  function setText(key: string, value: string | string[] | ExperienceProject[]) {
     setContent((current) => ({ ...(current as Record<string, unknown>), [key]: value } as ResumeEntryContent));
   }
 
@@ -61,6 +71,12 @@ function CandidateCard({ candidate }: { candidate: ResumeCandidateView }) {
         <input type="hidden" name="candidateId" value={candidate.id} />
         <input type="hidden" name="contentJson" value={contentJson} />
         <input type="hidden" name="tagsJson" value={JSON.stringify(effectiveTags)} />
+        {merging ? <input type="hidden" name="expectedEntryJson" value={candidate.duplicateEntrySnapshot ?? ''} /> : null}
+        {candidate.duplicateEntry && candidate.duplicateEntry.type === candidate.type ? <CandidateMergePanel
+          previous={candidate.duplicateEntry} incoming={candidate} disabled={pending}
+          onDirty={() => setMergeReady(false)}
+          onApply={entry => { setType(entry.type); setTitle(entry.title); setContent(entry.content); setTags(entry.tags); setMerging(true); setMergeReady(true); }}
+        /> : null}
         <div className="grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
           <Select name="type" value={type} onChange={(event) => selectType(event.target.value as ResumeEntryType)} aria-label="候选条目类型">
             {resumeEntryTypes.map((entryType) => <option key={entryType} value={entryType}>{resumeEntryTypeLabels[entryType]}</option>)}
@@ -87,8 +103,10 @@ function CandidateCard({ candidate }: { candidate: ResumeCandidateView }) {
         ) : null}
         {state.message || validationError ? <p className={`text-xs ${state.success ? "text-muted-foreground" : "text-destructive"}`}>{state.message ?? validationError}</p> : null}
         <div className="flex flex-wrap gap-2">
-          <Button type="submit" size="sm" disabled={pending}>{pending ? "正在加入…" : "确认加入条目仓库"}</Button>
-          <Button type="submit" size="sm" variant="ghost" formAction={ignoreResumeCandidateAction}>忽略</Button>
+          <Button type="submit" size="sm" disabled={pending || (merging && !mergeReady)}>{pending ? "正在保存…" : merging ? "确认补充到原条目" : "确认为新条目加入仓库"}</Button>
+          {merging && !mergeReady ? <p className="text-xs text-amber-700">字段选择已变化，请先重新载入编辑区。</p> : null}
+          {merging ? <Button type="button" size="sm" variant="secondary" disabled={pending} onClick={() => { setMerging(false); setType(candidate.type); setTitle(candidate.title); setContent(candidate.content); setTags(candidate.tags); }}>取消补充，恢复本次提取</Button> : null}
+          <Button type="submit" size="sm" variant="ghost" disabled={pending} formAction={ignoreResumeCandidateAction}>忽略</Button>
         </div>
       </form>
     </article>
@@ -102,7 +120,7 @@ function CandidateContentFields({
 }: {
   type: ResumeEntryType;
   content: ResumeEntryContent;
-  setText: (key: string, value: string | string[]) => void;
+  setText: (key: string, value: string | string[] | ExperienceProject[]) => void;
 }) {
   const values = content as Record<string, unknown>;
   const stringValue = (key: string) => typeof values[key] === "string" ? values[key] as string : "";
@@ -120,8 +138,8 @@ function CandidateContentFields({
     <Input value={listValue("techStack")} onChange={(event) => setText("techStack", event.target.value.split(/[，,]/).map((item) => item.trim()).filter(Boolean))} />
   </label>;
 
-  if (type === "project") return <div className="space-y-3">{input("projectCategory", "项目分类")}{techStack}{textarea("content", "项目内容")}</div>;
-  if (type === "experience") return <div className="space-y-3">{input("position", "岗位")}{techStack}{textarea("responsibilities", "工作职责")}{textarea("workContent", "工作内容")}</div>;
+  if (type === "project") return <div className="space-y-3">{input("projectCategory", "项目分类")}{techStack}{textarea("content", "项目内容")}{textarea("responsibilities", "个人职责")}</div>;
+  if (type === "experience") return <div className="space-y-3">{input("position", "岗位")}{techStack}{textarea("responsibilities", "工作职责")}{textarea("workContent", "工作内容")}<ExperienceProjectFields projects={getExperienceProjects(content)} onChange={projects => setText("projects", projects)} /></div>;
   if (type === "education") return <div className="space-y-3">{input("degree", "学历")}{input("major", "专业")}{input("dateRange", "就读时间")}{textarea("content", "教育内容")}</div>;
   if (type === "skill") return <div className="space-y-3">
     <label className="block text-sm text-foreground">
@@ -137,7 +155,8 @@ function CandidateContentFields({
 
 export function ResumeCandidateList({ candidates }: { candidates: ResumeCandidateView[] }) {
   const pendingCandidates = candidates.filter((candidate) => candidate.state === "pending");
-  if (!pendingCandidates.length) {
+  const mergedCandidates = candidates.filter(candidate => candidate.state === 'accepted' && candidate.mergeId);
+  if (!pendingCandidates.length && !mergedCandidates.length) {
     return <p className="rounded-md border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">暂无待确认候选。可在已解析的 PDF 下点击“生成结构化条目”。</p>;
   }
 
@@ -147,7 +166,18 @@ export function ResumeCandidateList({ candidates }: { candidates: ResumeCandidat
         <Badge variant="secondary">{pendingCandidates.length} 条待确认</Badge>
         <span className="text-xs text-muted-foreground">AI 结果不会自动进入正式条目仓库。</span>
       </div>
-      {pendingCandidates.map((candidate) => <CandidateCard key={candidate.id} candidate={candidate} />)}
+      {pendingCandidates.map((candidate) => <CandidateCard key={`${candidate.id}:${candidate.updatedAt}:${candidate.duplicateEntry?.updatedAt}`} candidate={candidate} />)}
+      {mergedCandidates.map(candidate => <MergedCandidate key={candidate.mergeId} candidate={candidate} />)}
     </div>
   );
+}
+
+function MergedCandidate({ candidate }: { candidate: ResumeCandidateView }) {
+  const [state, action, pending] = useActionState(undoResumeCandidateMergeAction, { success: false });
+  return <form action={action} className="rounded-md border border-border p-3 text-xs">
+    <input type="hidden" name="mergeId" value={candidate.mergeId} />
+    <p>已将“{candidate.title}”补充到“{candidate.duplicateEntryTitle ?? '原条目'}”，修改前内容已保存。</p>
+    <Button type="submit" size="sm" variant="ghost" disabled={pending}>{pending ? '正在撤回…' : '撤回此次补充'}</Button>
+    {state.message ? <p className={state.success ? 'text-muted-foreground' : 'text-destructive'}>{state.message}</p> : null}
+  </form>;
 }

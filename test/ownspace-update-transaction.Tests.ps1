@@ -85,7 +85,7 @@ Describe "OwnSpace transactional update" {
   It "rejects a concurrent update lock and releases it for the next run" {
     $first = Enter-OwnSpaceUpdateLock -ApplicationRoot $script:applicationRoot
     try {
-      { Enter-OwnSpaceUpdateLock -ApplicationRoot $script:applicationRoot } | Should Throw
+      { Enter-OwnSpaceUpdateLock -ApplicationRoot $script:applicationRoot } | Should Throw "Another OwnSpace update is already running."
     } finally {
       Exit-OwnSpaceUpdateLock -Lock $first
     }
@@ -111,7 +111,7 @@ Describe "OwnSpace transactional update" {
   }
 
   It "refuses to clean an unrelated temporary directory" {
-    { Remove-OwnSpaceTemporaryPath -Path $TestDrive } | Should Throw
+    { Remove-OwnSpaceTemporaryPath -Path $TestDrive } | Should Throw "Refusing to remove an unexpected temporary directory."
     Test-Path -LiteralPath $TestDrive | Should Be $true
   }
 }
