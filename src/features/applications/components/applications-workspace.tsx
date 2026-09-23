@@ -13,22 +13,27 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { applicationStatusMeta, applicationStatuses } from "@/config/application-status";
 import type { Application } from "@/db/schema";
-import { deleteApplicationAction, updateApplicationStatusAction } from "@/features/applications/actions";
+import { matchMissingJobCategoriesAction, deleteApplicationAction, updateApplicationStatusAction } from "@/features/applications/actions";
 import { ApplicationForm } from "@/features/applications/components/application-form";
 import { ApplicationsNavigation } from "@/features/applications/components/applications-navigation";
 import { ApplicationImageExport } from "@/features/applications/components/application-image-export";
 import { StatusBadge } from "@/features/applications/components/status-badge";
-import { companySizeMeta, internshipTypeMeta, internshipTypes } from "@/features/applications/constants";
+import { applicationCities, jobCategories, jobCategoryLabels, companySizeMeta, internshipTypeMeta, internshipTypes } from "@/features/applications/constants";
 import {
   defaultApplicationFilters,
   type ApplicationInternshipTypeFilter,
   type ApplicationStatusFilter,
+  type ResolvedApplicationFilters,
 } from "@/features/applications/filters";
 import { formatDate, formatDateTime } from "@/lib/date";
 import { cn } from "@/lib/utils";
+import type { ResumeAssetOption } from "@/features/resumes/types";
 
 type ApplicationsWorkspaceProps = {
-  applications: Array<Application & { interviewCount: number }>;
+  applications: Array<Application & { interviewCount: number; resumeAssetName: string | null }>;
+  resumeAssets: ResumeAssetOption[];
+  city?: string;
+  jobCategory?: ResolvedApplicationFilters["jobCategory"];
   query?: string;
   status?: ApplicationStatusFilter;
   internshipType?: ApplicationInternshipTypeFilter;
@@ -64,12 +69,125 @@ function ApplicationStatusSelect({ id, status, error }: { id: number; status: Ap
   );
 }
 
+type ApplicationRow = Application & { interviewCount: number; resumeAssetName: string | null };
+
+function normalizeCompanyName(company: string) {
+  return company.trim().toLocaleLowerCase();
+}
+
+function groupApplications(applications: ApplicationRow[]) {
+  const groups = new Map<string, ApplicationRow[]>();
+  for (const application of applications) {
+    const key = normalizeCompanyName(application.company);
+    const group = groups.get(key) ?? [];
+    group.push(application);
+    groups.set(key, group);
+  }
+  return [...groups.entries()].map(([key, group]) => ({ key, applications: group }));
+}
+
+function ApplicationCard({
+  application,
+  statusError,
+  onEdit,
+  onStatusUpdate,
+}: {
+  application: ApplicationRow;
+  statusError?: string;
+  onEdit: (application: Application) => void;
+  onStatusUpdate: (formData: FormData) => Promise<void>;
+}) {
+  const internshipMeta = internshipTypeMeta[application.internshipType];
+  const companySize = companySizeMeta[application.companySize];
+  const statusMeta = applicationStatusMeta[application.status];
+  const hasJobDescription = Boolean(application.jobDescription.trim());
+
+  return (
+    <Card className={cn("relative overflow-hidden border", statusMeta.cardClassName)}>
+      <div className={cn("absolute left-0 top-0 h-full", internshipMeta.barClassName, companySize.barWidthClassName)} aria-hidden="true" />
+      <CardContent className="grid gap-4 p-4 pl-8 lg:grid-cols-[1.4fr_1fr_180px_100px] lg:items-center">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-base font-semibold text-foreground">{application.company}</h2>
+            <StatusBadge status={application.status} />
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">{application.role}</p>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <span className="rounded-md border border-border bg-background px-2 py-1">{internshipMeta.label}</span>
+            <span className="rounded-md border border-border bg-background px-2 py-1">{companySize.label}</span>
+            <span className="rounded-md border border-border bg-background px-2 py-1">{application.city ?? "城市未填写"}</span>
+            <span className="rounded-md border border-border bg-background px-2 py-1">{application.jobCategory ? jobCategoryLabels[application.jobCategory] : "岗位类型未填写"}</span>
+            {hasJobDescription ? <span className="rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-primary">已有 JD</span> : null}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {hasJobDescription ? (
+              <>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/resumes?tab=jd&applicationId=${application.id}`}>
+                    <FileSearch className="h-3.5 w-3.5" />JD 匹配
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="ghost">
+                  <Link href={`/ai-hub?applicationId=${application.id}#interview-simulator`}>
+                    <MessagesSquare className="h-3.5 w-3.5" />面试模拟
+                  </Link>
+                </Button>
+              </>
+            ) : (
+              <Button type="button" size="sm" variant="ghost" onClick={() => onEdit(application)}>
+                <FilePlus2 className="h-3.5 w-3.5" />补充 JD
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          <div>渠道：{application.source}</div>
+          <div>投递：{formatDate(application.appliedDate)}</div>
+          {application.resumeAssetName ? <div className="truncate" title={application.resumeAssetName}>简历：{application.resumeAssetName}</div> : null}
+          {application.interviewTime ? <div>面试：{formatDateTime(application.interviewTime)}</div> : null}
+          {application.applicationUrl ? (
+            <a href={application.applicationUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-primary hover:underline">
+              投递网址
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          ) : null}
+          <Link href={`/interviews?applicationId=${application.id}`} className="mt-1 inline-flex items-center gap-1 text-primary hover:underline">
+            面经：{application.interviewCount}
+            <ExternalLink className="h-3 w-3" />
+          </Link>
+        </div>
+        <form action={onStatusUpdate}>
+          <input type="hidden" name="id" value={application.id} />
+          <ApplicationStatusSelect id={application.id} status={application.status} error={statusError} />
+        </form>
+        <div className="flex justify-start gap-2 lg:justify-end">
+          <Button type="button" variant="outline" size="icon" onClick={() => onEdit(application)} aria-label="编辑投递记录">
+            <Edit3 className="h-4 w-4" />
+          </Button>
+          <form action={deleteApplicationAction}>
+            <input type="hidden" name="id" value={application.id} />
+            <Button type="submit" variant="ghost" size="icon" aria-label="删除投递记录">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </form>
+        </div>
+        {application.notes ? <p className="border-t border-border pt-3 text-sm leading-6 text-muted-foreground lg:col-span-4">{application.notes}</p> : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ApplicationsWorkspace({
   applications,
+  resumeAssets,
+  city = "all",
+  jobCategory = "all",
   query = "",
   status = defaultApplicationFilters.status,
   internshipType = defaultApplicationFilters.internshipType,
 }: ApplicationsWorkspaceProps) {
+  const [isMatching, startMatching] = useTransition();
+  const [matchMessage, setMatchMessage] = useState("");
   const [editing, setEditing] = useState<Application | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
@@ -78,6 +196,7 @@ export function ApplicationsWorkspace({
   const searchParams = useSearchParams();
   const [isNavigating, startTransition] = useTransition();
   const [statusErrors, setStatusErrors] = useState<Record<number, string>>({});
+  const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
   const [optimisticApplications, updateOptimisticStatus] = useOptimistic(
     applications,
     (currentApplications, update: { id: number; status: Application["status"] }) =>
@@ -96,7 +215,9 @@ export function ApplicationsWorkspace({
     return "";
   }, [editing, isCreating]);
 
-  function updateFilter(next: { query?: string; status?: ApplicationStatusFilter; internshipType?: ApplicationInternshipTypeFilter }) {
+  const applicationGroups = useMemo(() => groupApplications(optimisticApplications), [optimisticApplications]);
+
+  function updateFilter(next: Partial<ResolvedApplicationFilters>) {
     const params = new URLSearchParams(searchParams.toString());
     if (next.query !== undefined) {
       const query = next.query.trim();
@@ -121,6 +242,8 @@ export function ApplicationsWorkspace({
       }
     }
 
+    if (next.city !== undefined) params.set("city", next.city);
+    if (next.jobCategory !== undefined) params.set("jobCategory", next.jobCategory);
     if (params.toString() === searchParams.toString()) {
       return;
     }
@@ -169,7 +292,34 @@ export function ApplicationsWorkspace({
   return (
     <div className="space-y-5">
       <ApplicationsNavigation />
-      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:items-end">
+      <div>
+        <div className="flex flex-col items-center gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+          <Button type="button" onClick={() => setIsExportOpen((value) => !value)} className="bg-teal-700 text-white hover:bg-teal-800 sm:justify-self-end">
+            <ImageIcon className="h-4 w-4" />
+            {isExportOpen ? "收起导出" : "投递导出"}
+          </Button>
+          <Button
+            type="button"
+            aria-label="新增投递"
+            title="新增投递"
+            onClick={() => setIsCreating(true)}
+            className="group h-12 w-12 gap-0 overflow-hidden rounded-full p-0 transition-[width] duration-200 hover:w-36 hover:gap-2 focus-visible:w-36 focus-visible:gap-2 motion-reduce:transition-none"
+          >
+            <Plus className="h-5 w-5 shrink-0" />
+            <span className="max-w-0 overflow-hidden opacity-0 transition-[max-width,opacity] duration-200 group-hover:max-w-24 group-hover:opacity-100 group-focus-visible:max-w-24 group-focus-visible:opacity-100 motion-reduce:transition-none">新增投递</span>
+          </Button>
+          <Button type="button" variant="outline" disabled={isMatching} className="sm:justify-self-start" onClick={() => startMatching(async () => {
+            setMatchMessage("");
+            try {
+              const result = await matchMissingJobCategoriesAction({ scope: "all_missing" });
+              setMatchMessage(result.message ?? "匹配已完成。");
+              if (result.success) router.refresh();
+            } catch { setMatchMessage("匹配未完成，请重试。"); }
+          })}>{isMatching ? "匹配中..." : "匹配缺失类型"}</Button>
+        </div>
+        {matchMessage ? <p className="mt-2 text-center text-sm text-muted-foreground" role="status">{matchMessage}</p> : null}
+      </div>
+      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:flex-wrap sm:items-end">
         <form onSubmit={handleSearch} className="flex-1 space-y-2">
           <Label htmlFor="application-search">搜索</Label>
           <div className="flex gap-2">
@@ -230,99 +380,73 @@ export function ApplicationsWorkspace({
             ))}
           </Select>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button type="button" onClick={() => setIsCreating(true)}>
-            <Plus className="h-4 w-4" />
-            新增投递
-          </Button>
-          <Button type="button" onClick={() => setIsExportOpen((value) => !value)} className="bg-teal-700 text-white hover:bg-teal-800">
-            <ImageIcon className="h-4 w-4" />
-            {isExportOpen ? "收起导出" : "投递导出"}
-          </Button>
+        <div className="w-full space-y-2 sm:w-36">
+          <Label htmlFor="city-filter">城市</Label>
+          <Select id="city-filter" value={city} disabled={isNavigating} onChange={(event) => updateFilter({ city: event.target.value })}>
+            <option value="all">全部城市</option>
+            {applicationCities.map((item) => <option key={item} value={item}>{item}</option>)}
+            <option value="other">其他城市</option>
+            <option value="missing">未填写</option>
+          </Select>
+        </div>
+        <div className="w-full space-y-2 sm:w-44">
+          <Label htmlFor="job-category-filter">岗位类型</Label>
+          <Select id="job-category-filter" value={jobCategory} disabled={isNavigating} onChange={(event) => updateFilter({ jobCategory: event.target.value as ResolvedApplicationFilters["jobCategory"] })}>
+            <option value="all">全部岗位类型</option>
+            {jobCategories.map((item) => <option key={item} value={item}>{jobCategoryLabels[item]}</option>)}
+            <option value="missing">未填写</option>
+          </Select>
         </div>
       </div>
-
       {isExportOpen ? <ApplicationImageExport applications={optimisticApplications} onClose={() => setIsExportOpen(false)} /> : null}
 
       {optimisticApplications.length === 0 ? (
-        <EmptyState title="还没有投递记录" actionLabel="新增投递" onAction={() => setIsCreating(true)} />
+        <EmptyState title="当前筛选下没有投递记录" actionLabel="新增投递" onAction={() => setIsCreating(true)} />
       ) : (
         <div className="space-y-3">
-          {optimisticApplications.map((application) => {
-            const internshipMeta = internshipTypeMeta[application.internshipType];
-            const companySize = companySizeMeta[application.companySize];
-            const statusMeta = applicationStatusMeta[application.status];
-            const hasJobDescription = Boolean(application.jobDescription.trim());
+          {applicationGroups.map((group) => {
+            const [topApplication, ...otherApplications] = group.applications;
+            const expanded = expandedCompanies.has(group.key);
 
             return (
-              <Card key={application.id} className={cn("relative overflow-hidden border", statusMeta.cardClassName)}>
-                <div className={cn("absolute left-0 top-0 h-full", internshipMeta.barClassName, companySize.barWidthClassName)} aria-hidden="true" />
-                <CardContent className="grid gap-4 p-4 pl-8 lg:grid-cols-[1.4fr_1fr_180px_100px] lg:items-center">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-base font-semibold text-foreground">{application.company}</h2>
-                      <StatusBadge status={application.status} />
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">{application.role}</p>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      <span className="rounded-md border border-border bg-background px-2 py-1">{internshipMeta.label}</span>
-                      <span className="rounded-md border border-border bg-background px-2 py-1">{companySize.label}</span>
-                      {hasJobDescription ? <span className="rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-primary">已有 JD</span> : null}
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {hasJobDescription ? (
-                        <>
-                          <Button asChild size="sm" variant="outline">
-                            <Link href={`/resumes?tab=jd&applicationId=${application.id}`}>
-                              <FileSearch className="h-3.5 w-3.5" />JD 匹配
-                            </Link>
-                          </Button>
-                          <Button asChild size="sm" variant="ghost">
-                            <Link href={`/ai-hub?applicationId=${application.id}#interview-simulator`}>
-                              <MessagesSquare className="h-3.5 w-3.5" />面试模拟
-                            </Link>
-                          </Button>
-                        </>
-                      ) : (
-                        <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(application)}>
-                          <FilePlus2 className="h-3.5 w-3.5" />补充 JD
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    <div>渠道：{application.source}</div>
-                    <div>投递：{formatDate(application.appliedDate)}</div>
-                    {application.interviewTime ? <div>面试：{formatDateTime(application.interviewTime)}</div> : null}
-                    {application.applicationUrl ? (
-                      <a href={application.applicationUrl} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-primary hover:underline">
-                        投递网址
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    ) : null}
-                    <Link href={`/interviews?applicationId=${application.id}`} className="mt-1 inline-flex items-center gap-1 text-primary hover:underline">
-                      面经：{application.interviewCount}
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
-                  </div>
-                  <form action={handleStatusUpdate}>
-                    <input type="hidden" name="id" value={application.id} />
-                    <ApplicationStatusSelect id={application.id} status={application.status} error={statusErrors[application.id]} />
-                  </form>
-                  <div className="flex justify-start gap-2 lg:justify-end">
-                    <Button type="button" variant="outline" size="icon" onClick={() => setEditing(application)} aria-label="编辑投递记录">
-                      <Edit3 className="h-4 w-4" />
-                    </Button>
-                    <form action={deleteApplicationAction}>
-                      <input type="hidden" name="id" value={application.id} />
-                      <Button type="submit" variant="ghost" size="icon" aria-label="删除投递记录">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </form>
-                  </div>
-                  {application.notes ? <p className="border-t border-border pt-3 text-sm leading-6 text-muted-foreground lg:col-span-4">{application.notes}</p> : null}
-                </CardContent>
-              </Card>
+              <div key={group.key} className="space-y-2">
+                <ApplicationCard
+                  application={topApplication}
+                  statusError={statusErrors[topApplication.id]}
+                  onEdit={setEditing}
+                  onStatusUpdate={handleStatusUpdate}
+                />
+                {otherApplications.length ? (
+                  <>
+                    {expanded
+                      ? otherApplications.map((application) => (
+                        <ApplicationCard
+                          key={application.id}
+                          application={application}
+                          statusError={statusErrors[application.id]}
+                          onEdit={setEditing}
+                          onStatusUpdate={handleStatusUpdate}
+                        />
+                      ))
+                      : null}
+                    <button
+                      type="button"
+                      className="w-full rounded-md px-3 py-2 text-left text-sm text-primary hover:bg-muted"
+                      aria-expanded={expanded}
+                      onClick={() => {
+                        setExpandedCompanies((current) => {
+                          const next = new Set(current);
+                          if (next.has(group.key)) next.delete(group.key);
+                          else next.add(group.key);
+                          return next;
+                        });
+                      }}
+                    >
+                      {expanded ? "收起同公司其余投递 ▴" : `同公司另有 ${otherApplications.length} 条投递 ▾`}
+                    </button>
+                  </>
+                ) : null}
+              </div>
             );
           })}
         </div>
@@ -332,7 +456,7 @@ export function ApplicationsWorkspace({
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/20 px-4 py-8">
           <div className="max-h-full w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-lg">
             <h2 className="mb-4 text-lg font-semibold">{modalTitle}</h2>
-            <ApplicationForm application={editing ?? undefined} onDone={closeForm} />
+            <ApplicationForm application={editing ?? undefined} resumeAssets={resumeAssets} onDone={closeForm} />
           </div>
         </div>
       ) : null}

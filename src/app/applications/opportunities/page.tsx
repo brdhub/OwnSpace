@@ -3,6 +3,7 @@ import { ApplicationsNavigation } from "@/features/applications/components/appli
 import { OpportunitiesWorkspace } from "@/features/applications/opportunities/components/opportunities-workspace";
 import { getOpportunityPageMeta, getRecruitmentOpportunities } from "@/features/applications/opportunities/queries";
 import { opportunityFiltersSchema } from "@/features/applications/opportunities/schemas";
+import { getResumeAssetOptions } from "@/features/resumes/queries";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +19,10 @@ export default async function OpportunitiesPage({ searchParams }: OpportunitiesP
     city: typeof rawParams.city === "string" ? rawParams.city : "",
     unrestrictedMajor: rawParams.unrestrictedMajor === "true" ? "true" : "",
   });
-  const [opportunities, meta] = await Promise.all([
+  const [opportunities, meta, resumeAssets] = await Promise.all([
     getRecruitmentOpportunities(filters),
     getOpportunityPageMeta(),
+    getResumeAssetOptions(),
   ]);
 
   return (
@@ -35,6 +37,7 @@ export default async function OpportunitiesPage({ searchParams }: OpportunitiesP
         companyType={filters.companyType}
         city={filters.city}
         unrestrictedMajor={filters.unrestrictedMajor}
+        resumeAssets={resumeAssets}
       />
     </PageContainer>
   );

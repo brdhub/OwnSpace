@@ -9,6 +9,7 @@ import type {
 } from "@/db/schema";
 
 export type ResumeAssetRecord = ResumeAsset;
+export type ResumeAssetOption = Pick<ResumeAsset, "id" | "originalName" | "createdAt">;
 export type ResumeEntryRecord = ResumeEntry;
 export type ResumeEntryCandidateRecord = ResumeEntryCandidate;
 export type OptimizationTaskRecord = ResumeOptimizationTask;

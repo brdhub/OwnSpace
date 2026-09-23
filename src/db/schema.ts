@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { foreignKey, index, integer, primaryKey, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { applicationStatuses } from "@/config/application-status";
-import { companySizes, internshipTypes } from "@/features/applications/constants";
+import { companySizes, internshipTypes, jobCategories } from "@/features/applications/constants";
 import { interviewResults, interviewRounds, interviewTagCategories } from "@/features/interviews/constants";
 import { planningEventSources, planningEventStatuses, planningEventTypes } from "@/features/planning/constants";
 import { studyCategories } from "@/features/study/constants";
@@ -48,23 +48,32 @@ export const recruitmentOpportunities = sqliteTable(
   }),
 );
 
-export const applications = sqliteTable("applications", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  opportunityId: integer("opportunity_id").references(() => recruitmentOpportunities.id, { onDelete: "set null" }),
-  company: text("company").notNull(),
-  role: text("role").notNull(),
-  source: text("source").notNull(),
-  status: text("status", { enum: applicationStatuses }).notNull().default("planned"),
-  internshipType: text("internship_type", { enum: internshipTypes }).notNull().default("daily"),
-  companySize: text("company_size", { enum: companySizes }).notNull().default("medium"),
-  appliedDate: text("applied_date").notNull(),
-  interviewTime: text("interview_time"),
-  applicationUrl: text("application_url"),
-  jobDescription: text("job_description").notNull().default(""),
-  notes: text("notes").notNull().default(""),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+export const applications = sqliteTable(
+  "applications",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    opportunityId: integer("opportunity_id").references(() => recruitmentOpportunities.id, { onDelete: "set null" }),
+    resumeAssetId: integer("resume_asset_id").references(() => resumeAssets.id, { onDelete: "set null" }),
+    company: text("company").notNull(),
+    role: text("role").notNull(),
+    city: text("city"),
+    jobCategory: text("job_category", { enum: jobCategories }),
+    source: text("source").notNull(),
+    status: text("status", { enum: applicationStatuses }).notNull().default("planned"),
+    internshipType: text("internship_type", { enum: internshipTypes }).notNull().default("daily"),
+    companySize: text("company_size", { enum: companySizes }).notNull().default("medium"),
+    appliedDate: text("applied_date").notNull(),
+    interviewTime: text("interview_time"),
+    applicationUrl: text("application_url"),
+    jobDescription: text("job_description").notNull().default(""),
+    notes: text("notes").notNull().default(""),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => ({
+    resumeAssetIndex: index("applications_resume_asset_id_idx").on(table.resumeAssetId),
+  }),
+);
 
 export const dailyActions = sqliteTable("daily_actions", {
   id: integer("id").primaryKey({ autoIncrement: true }),

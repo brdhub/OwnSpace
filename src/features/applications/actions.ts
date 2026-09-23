@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
+import { matchJobCategory } from "@/features/applications/job-category";
 import { db } from "@/db";
-import { applications, interviewNotes } from "@/db/schema";
+import { applications, interviewNotes, resumeAssets } from "@/db/schema";
 import {
   applicationFormSchema,
   applicationIdSchema,
@@ -32,6 +34,20 @@ function now() {
   return new Date().toISOString();
 }
 
+async function validateResumeAssetId(resumeAssetId: number | undefined) {
+  if (resumeAssetId === undefined) {
+    return { id: null as number | null };
+  }
+
+  const asset = await db
+    .select({ id: resumeAssets.id })
+    .from(resumeAssets)
+    .where(eq(resumeAssets.id, resumeAssetId))
+    .get();
+
+  return asset ? { id: asset.id } : { error: "所选简历不存在，请重新选择。" };
+}
+
 export async function createApplicationAction(
   _previousState: ApplicationActionState = emptyState,
   formData: FormData,
@@ -43,8 +59,14 @@ export async function createApplicationAction(
     return { success: false, errors: parsed.error.flatten().fieldErrors };
   }
 
+  const resumeAsset = await validateResumeAssetId(parsed.data.resumeAssetId);
+  if (resumeAsset.error) {
+    return { success: false, errors: { resumeAssetId: [resumeAsset.error] } };
+  }
+
   await db.insert(applications).values({
     ...parsed.data,
+    resumeAssetId: resumeAsset.id,
     interviewTime: parsed.data.interviewTime ?? null,
     applicationUrl: parsed.data.applicationUrl ?? null,
     jobDescription: parsed.data.jobDescription ?? "",
@@ -71,10 +93,16 @@ export async function updateApplicationAction(
   }
 
   const { id, ...values } = parsed.data;
+  const resumeAsset = await validateResumeAssetId(values.resumeAssetId);
+  if (resumeAsset.error) {
+    return { success: false, errors: { resumeAssetId: [resumeAsset.error] } };
+  }
+
   await db
     .update(applications)
     .set({
       ...values,
+      resumeAssetId: resumeAsset.id,
       interviewTime: values.interviewTime ?? null,
       applicationUrl: values.applicationUrl ?? null,
       jobDescription: values.jobDescription ?? "",
@@ -116,4 +144,29 @@ export async function updateApplicationStatusAction(formData: FormData): Promise
   revalidatePath("/");
   revalidatePath("/applications");
   return { success: true };
+}
+
+export async function matchMissingJobCategoriesAction(input: unknown): Promise<ApplicationActionState> {
+  if (!z.object({ scope: z.literal("all_missing") }).strict().safeParse(input).success) {
+    return { success: false, message: "匹配请求无效，请重试。" };
+  }
+  try {
+    const result = db.transaction((tx) => {
+      const rows = tx.select({ id: applications.id, role: applications.role })
+        .from(applications).where(isNull(applications.jobCategory)).all();
+      let matched = 0;
+      for (const row of rows) {
+        const jobCategory = matchJobCategory(row.role);
+        if (!jobCategory) continue;
+        matched += tx.update(applications).set({ jobCategory, updatedAt: now() })
+          .where(and(eq(applications.id, row.id), eq(applications.role, row.role), isNull(applications.jobCategory)))
+          .run().changes;
+      }
+      return { matched, remaining: rows.length - matched };
+    });
+    revalidatePath("/applications");
+    return { success: true, message: `已匹配 ${result.matched} 条，${result.remaining} 条标题不明确，待手动填写。` };
+  } catch {
+    return { success: false, message: "匹配未完成，请重试。" };
+  }
 }

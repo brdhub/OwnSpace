@@ -19,6 +19,7 @@ import { RecommendedOpportunities } from "@/features/dashboard/components/recomm
 import type { CalendarActivityDay, CalendarInterviewEvent } from "@/features/dashboard/queries";
 import type { RecommendedOpportunity } from "@/features/dashboard/queries";
 import type { StudyCategory } from "@/features/study/constants";
+import type { ResumeAssetOption } from "@/features/resumes/types";
 
 type DashboardViewProps = {
   statusStats: Array<{ status: ApplicationStatus; count: number }>;
@@ -37,6 +38,7 @@ type DashboardViewProps = {
     hasUserEvents: boolean;
   };
   recommendedOpportunities: RecommendedOpportunity[];
+  resumeAssets: ResumeAssetOption[];
 };
 
 export function DashboardView({
@@ -49,6 +51,7 @@ export function DashboardView({
   today,
   planningSummary,
   recommendedOpportunities,
+  resumeAssets,
 }: DashboardViewProps) {
   const [showCreateApplication, setShowCreateApplication] = useState(false);
   const router = useRouter();
@@ -103,7 +106,7 @@ export function DashboardView({
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/20 px-4 py-8">
           <div className="w-full max-w-2xl rounded-lg border border-border bg-card p-5 shadow-lg">
             <h2 className="mb-4 text-lg font-semibold">新增投递记录</h2>
-            <ApplicationForm onDone={() => setShowCreateApplication(false)} />
+            <ApplicationForm resumeAssets={resumeAssets} onDone={() => setShowCreateApplication(false)} />
           </div>
         </div>
       ) : null}

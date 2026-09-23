@@ -47,3 +47,12 @@ export const companySizeMeta: Record<CompanySize, { label: string; barWidthClass
     canvasWidth: 16,
   },
 };
+
+export const applicationCities = ["深圳", "广州", "杭州", "上海", "北京"] as const;
+export const jobCategories = ["backend", "frontend", "fullstack", "ai_application", "algorithm", "testing", "operations", "client", "embedded", "product", "other"] as const;
+export type JobCategory = (typeof jobCategories)[number];
+export const jobCategoryLabels: Record<JobCategory, string> = {
+  backend: "后端", frontend: "前端", fullstack: "全栈", ai_application: "AI 应用 / Agent",
+  algorithm: "算法", testing: "测试", operations: "运维 / SRE", client: "客户端",
+  embedded: "嵌入式", product: "产品", other: "其他",
+};

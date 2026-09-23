@@ -1,5 +1,5 @@
 import { applicationStatuses, type ApplicationStatus } from "@/config/application-status";
-import { internshipTypes } from "@/features/applications/constants";
+import { internshipTypes, applicationCities, jobCategories } from "@/features/applications/constants";
 
 export const applicationStatusFilters = ["active", "all", ...applicationStatuses] as const;
 export type ApplicationStatusFilter = (typeof applicationStatusFilters)[number];
@@ -8,6 +8,8 @@ export const applicationInternshipTypeFilters = ["all", ...internshipTypes] as c
 export type ApplicationInternshipTypeFilter = (typeof applicationInternshipTypeFilters)[number];
 
 export type ResolvedApplicationFilters = {
+  city: string;
+  jobCategory: "all" | "missing" | (typeof jobCategories)[number];
   query: string;
   status: ApplicationStatusFilter;
   internshipType: ApplicationInternshipTypeFilter;
@@ -23,11 +25,15 @@ function includesValue<T extends readonly string[]>(values: T, value: unknown): 
 }
 
 export function resolveApplicationFilters(filters: {
+  city?: unknown;
+  jobCategory?: unknown;
   query?: unknown;
   status?: unknown;
   internshipType?: unknown;
 }): ResolvedApplicationFilters {
   return {
+    city: includesValue(["all", "missing", "other", ...applicationCities], filters.city) ? filters.city : "all",
+    jobCategory: includesValue(["all", "missing", ...jobCategories] as const, filters.jobCategory) ? filters.jobCategory : "all",
     query: typeof filters.query === "string" ? filters.query.trim() : "",
     status: includesValue(applicationStatusFilters, filters.status)
       ? filters.status

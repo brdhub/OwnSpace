@@ -1,8 +1,8 @@
-import { and, desc, eq, inArray, like, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, notInArray, like, or } from "drizzle-orm";
 import { applicationStatuses } from "@/config/application-status";
 import { db } from "@/db";
-import { applications } from "@/db/schema";
-import { internshipTypes } from "@/features/applications/constants";
+import { applications, resumeAssets } from "@/db/schema";
+import { internshipTypes, applicationCities } from "@/features/applications/constants";
 import { getApplicationStatusesForFilter, type ResolvedApplicationFilters } from "@/features/applications/filters";
 import { getInterviewCountsByApplication } from "@/features/interviews/queries";
 import type { ApplicationAiContext, ApplicationJdContext } from "@/features/applications/jd-context";
@@ -24,16 +24,24 @@ export async function getApplications(filters: ResolvedApplicationFilters) {
     conditions.push(inArray(applications.internshipType, [filters.internshipType]));
   }
 
+  if (filters.city === "missing") conditions.push(isNull(applications.city));
+  else if (filters.city === "other") conditions.push(notInArray(applications.city, [...applicationCities]));
+  else if (filters.city && filters.city !== "all") conditions.push(eq(applications.city, filters.city));
+  if (filters.jobCategory === "missing") conditions.push(isNull(applications.jobCategory));
+  else if (filters.jobCategory && filters.jobCategory !== "all") conditions.push(eq(applications.jobCategory, filters.jobCategory));
+
   const rows = await db
-    .select()
+    .select({ application: applications, resumeAssetName: resumeAssets.originalName })
     .from(applications)
+    .leftJoin(resumeAssets, eq(applications.resumeAssetId, resumeAssets.id))
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(applications.appliedDate), desc(applications.updatedAt));
 
   const interviewCounts = await getInterviewCountsByApplication();
   return rows.map((row) => ({
-    ...row,
-    interviewCount: interviewCounts[row.id] ?? 0,
+    ...row.application,
+    resumeAssetName: row.resumeAssetName,
+    interviewCount: interviewCounts[row.application.id] ?? 0,
   }));
 }
 

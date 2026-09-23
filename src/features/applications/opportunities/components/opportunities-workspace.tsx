@@ -20,6 +20,7 @@ import {
 } from "@/features/applications/opportunities/actions";
 import type { RecruitmentOpportunityListItem } from "@/features/applications/opportunities/queries";
 import { buildApplicationDraft } from "@/features/applications/opportunities/repository";
+import type { ResumeAssetOption } from "@/features/resumes/types";
 import { formatDate, formatDateTime, toDateInputValue } from "@/lib/date";
 
 type OpportunitiesWorkspaceProps = {
@@ -31,6 +32,7 @@ type OpportunitiesWorkspaceProps = {
   companyType: string;
   city: string;
   unrestrictedMajor: string;
+  resumeAssets: ResumeAssetOption[];
 };
 
 const initialActionState: OpportunityActionState = { success: false };
@@ -74,6 +76,7 @@ export function OpportunitiesWorkspace({
   companyType,
   city,
   unrestrictedMajor,
+  resumeAssets,
 }: OpportunitiesWorkspaceProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -209,6 +212,7 @@ export function OpportunitiesWorkspace({
             <h2 className="mb-4 text-lg font-semibold">填写投递记录</h2>
             <ApplicationForm
               initialValues={buildApplicationDraft(applying, "apply", toDateInputValue())}
+              resumeAssets={resumeAssets}
               onDone={() => {
                 setApplying(null);
                 router.refresh();

@@ -14,6 +14,7 @@ import {
   type ResumeAsset,
   type ResumeOptimizationTask,
 } from "@/db/schema";
+import type { ResumeAssetOption } from "@/features/resumes/types";
 import { jdRecommendationResponseSchema, type JdRecommendation } from "@/features/resumes/ai-schema";
 import { hasCompleteRecommendationCoverage } from "@/features/resumes/jd-selection";
 import { createTaskService } from './workflow/task-service';
@@ -91,6 +92,17 @@ function parseSuggestionContent(contentJson: string) {
   } catch {
     return {};
   }
+}
+
+export async function getResumeAssetOptions(): Promise<ResumeAssetOption[]> {
+  return db
+    .select({
+      id: resumeAssets.id,
+      originalName: resumeAssets.originalName,
+      createdAt: resumeAssets.createdAt,
+    })
+    .from(resumeAssets)
+    .orderBy(desc(resumeAssets.createdAt));
 }
 
 export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {

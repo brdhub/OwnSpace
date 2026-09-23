@@ -8,6 +8,8 @@ import {
 
 test("defaults the applications page to active autumn applications", () => {
   assert.deepEqual(resolveApplicationFilters({}), {
+    city: "all",
+    jobCategory: "all",
     query: "",
     status: "active",
     internshipType: "autumn",
@@ -16,6 +18,8 @@ test("defaults the applications page to active autumn applications", () => {
 
 test("preserves explicit all filters instead of replacing them with defaults", () => {
   assert.deepEqual(resolveApplicationFilters({ status: "all", internshipType: "all" }), {
+    city: "all",
+    jobCategory: "all",
     query: "",
     status: "all",
     internshipType: "all",
@@ -37,6 +41,8 @@ test("active status includes every status except closed", () => {
 
 test("invalid filter values fall back to the page defaults", () => {
   assert.deepEqual(resolveApplicationFilters({ status: "unknown", internshipType: "unknown" }), {
+    city: "all",
+    jobCategory: "all",
     query: "",
     status: "active",
     internshipType: "autumn",

@@ -6,6 +6,7 @@ import { getCalendarActivityDays, getInterviewCalendarEvents, getRecommendedOppo
 import { getDashboardPlanningSummary } from "@/features/planning/queries";
 import { hasTodayJournalEntry } from "@/features/journal/queries";
 import { getTodayStudyProgress } from "@/features/study/queries";
+import { getResumeAssetOptions } from "@/features/resumes/queries";
 import { toDateInputValue } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export default async function DashboardPage() {
   await ensureDueInterviewNotes();
 
   const today = toDateInputValue();
-  const [applicationStats, calendarEvents, calendarActivityDays, hasJournalEntry, studyProgress, planningSummary, recommendedOpportunities] = await Promise.all([
+  const [applicationStats, calendarEvents, calendarActivityDays, hasJournalEntry, studyProgress, planningSummary, recommendedOpportunities, resumeAssets] = await Promise.all([
     getApplicationStats(),
     getInterviewCalendarEvents(),
     getCalendarActivityDays(),
@@ -22,6 +23,7 @@ export default async function DashboardPage() {
     getTodayStudyProgress(),
     getDashboardPlanningSummary(today),
     getRecommendedOpportunities(),
+    getResumeAssetOptions(),
   ]);
 
   return (
@@ -36,6 +38,7 @@ export default async function DashboardPage() {
         today={today}
         planningSummary={planningSummary}
         recommendedOpportunities={recommendedOpportunities}
+        resumeAssets={resumeAssets}
       />
     </PageContainer>
   );

@@ -5,7 +5,9 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
 });
 
 export function formatDate(value: Date | string) {
-  const date = typeof value === "string" ? new Date(`${value}T00:00:00`) : value;
+  const date = typeof value === "string"
+    ? new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value)
+    : value;
   return dateFormatter.format(date);
 }
 
