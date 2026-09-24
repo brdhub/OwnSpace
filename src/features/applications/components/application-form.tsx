@@ -1,7 +1,9 @@
 ﻿"use client";
 
+import { Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
-import { useFormStatus } from "react-dom";
+import { createPortal, useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +11,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { applicationStatusMeta, applicationStatuses } from "@/config/application-status";
 import type { Application } from "@/db/schema";
-import { createApplicationAction, type ApplicationActionState, updateApplicationAction } from "@/features/applications/actions";
+import { createApplicationAction, deleteApplicationAction, type ApplicationActionState, updateApplicationAction } from "@/features/applications/actions";
 import { applicationCities, jobCategories, jobCategoryLabels, companySizeMeta, companySizes, internshipTypeMeta, internshipTypes } from "@/features/applications/constants";
 import { matchJobCategory } from "@/features/applications/job-category";
 import type { ResumeAssetOption } from "@/features/resumes/types";
@@ -20,6 +22,8 @@ type ApplicationFormProps = {
   initialValues?: ApplicationInitialValues;
   resumeAssets?: ResumeAssetOption[];
   onDone: () => void;
+  modalTitle?: string;
+  modalSubtitle?: string;
 };
 
 export type ApplicationInitialValues = Partial<
@@ -62,7 +66,8 @@ function SubmitButton({ label }: { label: string }) {
   );
 }
 
-export function ApplicationForm({ application, initialValues, resumeAssets = [], onDone }: ApplicationFormProps) {
+export function ApplicationForm({ application, initialValues, resumeAssets = [], onDone, modalTitle, modalSubtitle }: ApplicationFormProps) {
+  const router = useRouter();
   const initialCity = application ? application.city ?? "" : initialValues?.city ?? "深圳";
   const [cityChoice, setCityChoice] = useState<string>(!initialCity || applicationCities.some((city) => city === initialCity) ? initialCity : "other");
   const [customCity, setCustomCity] = useState(initialCity && !applicationCities.some((city) => city === initialCity) ? initialCity : "");
@@ -73,6 +78,9 @@ export function ApplicationForm({ application, initialValues, resumeAssets = [],
   const selectedCategory = categoryManual ? manualCategory : suggestedCategory;
   const action = application ? updateApplicationAction : createApplicationAction;
   const [state, formAction] = useActionState(action, initialState);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     if (state.success) {
@@ -80,10 +88,47 @@ export function ApplicationForm({ application, initialValues, resumeAssets = [],
     }
   }, [onDone, state.success]);
 
+  useEffect(() => {
+    if (!isDeleteConfirmOpen || isDeleting) return;
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsDeleteConfirmOpen(false);
+    }
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [isDeleteConfirmOpen, isDeleting]);
+
+  async function confirmDelete() {
+    if (!application || isDeleting) return;
+    setDeleteError("");
+    setIsDeleting(true);
+    try {
+      const formData = new FormData();
+      formData.set("id", String(application.id));
+      await deleteApplicationAction(formData);
+      setIsDeleteConfirmOpen(false);
+      onDone();
+      router.refresh();
+    } catch {
+      setDeleteError("删除失败，请重试。");
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} className={modalTitle ? "flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-teal-900/10 bg-white shadow-2xl" : "space-y-5"}>
+      {modalTitle ? <div className="flex shrink-0 flex-col gap-4 border-b border-teal-100 bg-gradient-to-r from-teal-50 via-white to-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <div className="min-w-0"><p className="text-xs font-semibold tracking-[0.2em] text-teal-700">APPLICATION RECORD</p><h2 id="application-form-title" className="mt-1 text-xl font-semibold text-slate-900 sm:text-2xl">{modalTitle}</h2><p className="mt-1 truncate text-sm text-slate-500">{modalSubtitle}</p></div>
+        <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+          {application ? <Button type="button" variant="outline" className="border-rose-300 text-rose-700 hover:bg-rose-50 hover:text-rose-800" onClick={() => setIsDeleteConfirmOpen(true)}><Trash2 className="h-4 w-4" />删除记录</Button> : null}
+          <Button type="button" variant="outline" onClick={onDone}>取消</Button>
+          <SubmitButton label={application ? "保存修改" : "新增记录"} />
+        </div>
+      </div> : null}
+      <div className={modalTitle ? "min-h-0 space-y-5 overflow-y-auto px-6 py-6 sm:px-8 sm:py-7" : "space-y-5"}>
       {application ? <input type="hidden" name="id" value={application.id} /> : null}
       {!application && initialValues?.opportunityId ? <input type="hidden" name="opportunityId" value={initialValues.opportunityId} /> : null}
+      <div className="flex items-center gap-3 border-b border-slate-100 pb-3"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-100 text-xs font-bold text-teal-800">01</span><h3 className="font-semibold text-slate-800">岗位信息</h3></div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="company">公司名称</Label>
@@ -96,7 +141,7 @@ export function ApplicationForm({ application, initialValues, resumeAssets = [],
           <FieldError errors={state.errors?.role} />
         </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-2">
           <Label htmlFor="cityChoice">城市</Label>
           <Select id="cityChoice" value={cityChoice} onChange={(event) => setCityChoice(event.target.value)}>
@@ -118,8 +163,6 @@ export function ApplicationForm({ application, initialValues, resumeAssets = [],
           {categoryManual ? <Button type="button" variant="ghost" size="sm" onClick={() => setCategoryManual(false)}>按标题重新匹配</Button> : null}
           <FieldError errors={state.errors?.jobCategory} />
         </div>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="internshipType">招聘类型</Label>
           <Select id="internshipType" name="internshipType" defaultValue={application?.internshipType ?? initialValues?.internshipType ?? "daily"}>
@@ -143,6 +186,7 @@ export function ApplicationForm({ application, initialValues, resumeAssets = [],
           <FieldError errors={state.errors?.companySize} />
         </div>
       </div>
+      <div className="flex items-center gap-3 border-b border-slate-100 pb-3 pt-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-100 text-xs font-bold text-teal-800">02</span><h3 className="font-semibold text-slate-800">投递进展</h3></div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="source">投递渠道</Label>
@@ -173,6 +217,7 @@ export function ApplicationForm({ application, initialValues, resumeAssets = [],
           <FieldError errors={state.errors?.interviewTime} />
         </div>
       </div>
+      <div className="flex items-center gap-3 border-b border-slate-100 pb-3 pt-2"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-teal-100 text-xs font-bold text-teal-800">03</span><h3 className="font-semibold text-slate-800">补充资料</h3></div>
       <div className="space-y-2">
         <Label htmlFor="applicationUrl">投递网址</Label>
         <Input id="applicationUrl" name="applicationUrl" type="url" defaultValue={application?.applicationUrl ?? initialValues?.applicationUrl ?? ""} />
@@ -211,12 +256,25 @@ export function ApplicationForm({ application, initialValues, resumeAssets = [],
         <FieldError errors={state.errors?.notes} />
       </div>
       {state.message && !state.success ? <p className="text-sm text-destructive">{state.message}</p> : null}
-      <div className="flex justify-end gap-2">
+      {!modalTitle ? <div className="flex justify-end gap-2 border-t border-slate-100 pt-5">
         <Button type="button" variant="outline" onClick={onDone}>
           取消
         </Button>
         <SubmitButton label={application ? "保存修改" : "新增记录"} />
+      </div> : null}
       </div>
+      {isDeleteConfirmOpen && application && typeof document !== "undefined" ? createPortal(<div className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/50 px-4 backdrop-blur-[2px]">
+        <div role="alertdialog" aria-modal="true" aria-labelledby="delete-application-title" aria-describedby="delete-application-description" className="w-full max-w-md rounded-2xl border border-rose-200 bg-white p-6 shadow-2xl">
+          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-100 text-rose-700"><Trash2 className="h-5 w-5" /></div>
+          <h3 id="delete-application-title" className="mt-4 text-lg font-semibold text-slate-900">确认删除投递记录？</h3>
+          <p id="delete-application-description" className="mt-2 text-sm leading-6 text-slate-600">将删除「{application.company} · {application.role}」及其状态轨迹。此操作无法撤销。</p>
+          {deleteError ? <p role="alert" className="mt-3 text-sm text-rose-700">{deleteError}</p> : null}
+          <div className="mt-6 flex justify-end gap-2">
+            <Button type="button" variant="outline" disabled={isDeleting} autoFocus onClick={() => setIsDeleteConfirmOpen(false)}>返回编辑</Button>
+            <Button type="button" variant="destructive" disabled={isDeleting} onClick={confirmDelete}>{isDeleting ? "删除中..." : "确认删除"}</Button>
+          </div>
+        </div>
+      </div>, document.body) : null}
     </form>
   );
 }

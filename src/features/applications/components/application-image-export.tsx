@@ -11,11 +11,8 @@ import { Select } from "@/components/ui/select";
 import { applicationStatusMeta, type ApplicationStatus } from "@/config/application-status";
 import type { Application } from "@/db/schema";
 import { internshipTypeMeta, type InternshipType } from "@/features/applications/constants";
-import { buildApplicationStatistics } from "@/features/applications/application-statistics";
-import { ApplicationStatisticsView, generateStatisticsImage } from "@/features/applications/components/application-statistics-view";
 
 type ExportPeriod = "all" | "recent7" | "today" | "custom";
-type ExportView = "details" | "statistics";
 const maxDetailImageRows = 100;
 
 type ApplicationImageExportProps = {
@@ -204,7 +201,6 @@ function generateImage(rows: ExportRow[], rangeLabel: string) {
 }
 
 export function ApplicationImageExport({ applications, onClose }: ApplicationImageExportProps) {
-  const [view, setView] = useState<ExportView>("details");
   const [period, setPeriod] = useState<ExportPeriod>("recent7");
   const [startDate, setStartDate] = useState(() => getRecent7Start());
   const [endDate, setEndDate] = useState(() => toLocalDateKey());
@@ -238,11 +234,7 @@ export function ApplicationImageExport({ applications, onClose }: ApplicationIma
     () => getExportRange(period, startDate, endDate, rows),
     [endDate, period, rows, startDate],
   );
-  const statistics = useMemo(
-    () => buildApplicationStatistics(rows, exportRange.startDate, exportRange.endDate),
-    [rows, exportRange.startDate, exportRange.endDate],
-  );
-  const detailTooLarge = view === "details" && rows.length > maxDetailImageRows;
+  const detailTooLarge = rows.length > maxDetailImageRows;
 
   function clearPreview() {
     setImageUrl("");
@@ -277,9 +269,7 @@ export function ApplicationImageExport({ applications, onClose }: ApplicationIma
   function handleGenerate() {
     if (rangeError || detailTooLarge) return;
     try {
-      const url = view === "statistics"
-        ? generateStatisticsImage(statistics, exportRange.label)
-        : generateImage(rows, exportRange.label);
+      const url = generateImage(rows, exportRange.label);
       if (!url.startsWith("data:image/png")) throw new Error("Canvas export failed");
       setImageUrl(url);
       setExportError("");
@@ -302,7 +292,7 @@ export function ApplicationImageExport({ applications, onClose }: ApplicationIma
           </div>
           <div className="min-w-0">
             <CardTitle className="text-base">投递导出</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">按当前页面筛选和日期范围导出明细或统计图片。</p>
+            <p className="mt-1 text-sm text-muted-foreground">按当前页面筛选和日期范围导出投递明细图片。</p>
           </div>
         </div>
         <Button type="button" variant="ghost" size="sm" onClick={onClose}>
@@ -311,10 +301,6 @@ export function ApplicationImageExport({ applications, onClose }: ApplicationIma
         </Button>
       </CardHeader>
       <CardContent className="space-y-4 border-t border-teal-100 p-4">
-        <div className="flex gap-2" aria-label="导出内容">
-          <Button type="button" aria-pressed={view === "details"} variant={view === "details" ? "default" : "outline"} onClick={() => { setView("details"); clearPreview(); }}>投递明细</Button>
-          <Button type="button" aria-pressed={view === "statistics"} variant={view === "statistics" ? "default" : "outline"} onClick={() => { setView("statistics"); clearPreview(); }}>投递统计</Button>
-        </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="export-period">快捷范围</Label>
@@ -345,17 +331,16 @@ export function ApplicationImageExport({ applications, onClose }: ApplicationIma
           </Button>
           {imageUrl ? (
             <Button asChild type="button" variant="outline">
-              <a href={imageUrl} download={`ownspace-applications-${view}-${downloadRange}.png`}>
+              <a href={imageUrl} download={`ownspace-applications-details-${downloadRange}.png`}>
                 <Download className="h-4 w-4" />
                 下载
               </a>
             </Button>
           ) : null}
         </div>
-        {view === "statistics" && !rangeError ? <ApplicationStatisticsView statistics={statistics} /> : null}
         {imageUrl ? (
           <div className="overflow-hidden rounded-lg border border-border bg-background p-3">
-            <Image src={imageUrl} alt={view === "statistics" ? "投递统计图片预览" : "投递明细图片预览"} width={1200} height={view === "statistics" ? 1120 : 640} unoptimized className="w-full rounded-md" />
+            <Image src={imageUrl} alt="投递明细图片预览" width={1200} height={640} unoptimized className="w-full rounded-md" />
           </div>
         ) : null}
       </CardContent>

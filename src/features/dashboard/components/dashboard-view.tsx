@@ -6,24 +6,20 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { ApplicationStatus } from "@/config/application-status";
 import type { PlanningEvent } from "@/db/schema";
+import type { StatisticsRow } from "@/features/applications/application-statistics";
 import { ApplicationForm } from "@/features/applications/components/application-form";
-import type { InternshipType } from "@/features/applications/constants";
+import { ApplicationAchievement } from "@/features/dashboard/components/application-achievement";
 import { InterviewCalendar } from "@/features/dashboard/components/interview-calendar";
-import { StatusSummary } from "@/features/dashboard/components/status-summary";
 import { TodayJournalCard } from "@/features/dashboard/components/today-journal-card";
 import { TodayStudyCard } from "@/features/dashboard/components/today-study-card";
 import { PlanningSummaryCard } from "@/features/dashboard/components/planning-summary-card";
-import { RecommendedOpportunities } from "@/features/dashboard/components/recommended-opportunities";
 import type { CalendarActivityDay, CalendarInterviewEvent } from "@/features/dashboard/queries";
-import type { RecommendedOpportunity } from "@/features/dashboard/queries";
 import type { StudyCategory } from "@/features/study/constants";
 import type { ResumeAssetOption } from "@/features/resumes/types";
 
 type DashboardViewProps = {
-  statusStats: Array<{ status: ApplicationStatus; count: number }>;
-  internshipTypeStats: Array<{ internshipType: InternshipType; count: number }>;
+  applicationStatisticsRows: StatisticsRow[];
   calendarEvents: CalendarInterviewEvent[];
   calendarActivityDays: CalendarActivityDay[];
   hasJournalEntry: boolean;
@@ -37,20 +33,17 @@ type DashboardViewProps = {
     latestProgress: PlanningEvent | null;
     hasUserEvents: boolean;
   };
-  recommendedOpportunities: RecommendedOpportunity[];
   resumeAssets: ResumeAssetOption[];
 };
 
 export function DashboardView({
-  statusStats,
-  internshipTypeStats,
+  applicationStatisticsRows,
   calendarEvents,
   calendarActivityDays,
   hasJournalEntry,
   studyProgress,
   today,
   planningSummary,
-  recommendedOpportunities,
   resumeAssets,
 }: DashboardViewProps) {
   const [showCreateApplication, setShowCreateApplication] = useState(false);
@@ -91,9 +84,7 @@ export function DashboardView({
         </div>
       </section>
 
-      <RecommendedOpportunities opportunities={recommendedOpportunities} />
-
-      <StatusSummary statusStats={statusStats} internshipTypeStats={internshipTypeStats} />
+      <ApplicationAchievement rows={applicationStatisticsRows} today={today} />
 
       <div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-4">
         <TodayJournalCard hasEntry={hasJournalEntry} today={today} />

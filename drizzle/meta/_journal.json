@@ -169,6 +169,20 @@
       "when": 1790000000000,
       "tag": "0023_add_application_city_category",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1790230197357,
+      "tag": "0024_mute_stryfe",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1790237163014,
+      "tag": "0025_interview_simulator",
+      "breakpoints": true
     }
   ]
 }

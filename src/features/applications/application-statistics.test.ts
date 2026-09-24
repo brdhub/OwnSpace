@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildApplicationStatistics } from "./application-statistics";
+import { buildApplicationStatistics, buildDashboardApplicationStatistics } from "./application-statistics";
 
 test("statistics count records by status and recruitment type within the selected rows", () => {
   const result = buildApplicationStatistics([
@@ -42,4 +42,17 @@ test("empty ranges have zero counts and no trend bars", () => {
   const result = buildApplicationStatistics([], "", "");
   assert.equal(result.total, 0);
   assert.deepEqual(result.trend, []);
+});
+
+test("dashboard statistics keep the full history and limit the recent view to 30 days", () => {
+  const rows = [
+    { appliedDate: "2026-08-25", status: "applied" as const, internshipType: "summer" as const },
+    { appliedDate: "2026-08-26", status: "offer" as const, internshipType: "autumn" as const },
+    { appliedDate: "2026-09-24", status: "applied" as const, internshipType: "autumn" as const },
+  ];
+
+  assert.equal(buildDashboardApplicationStatistics(rows, "2026-09-24", "all").total, 3);
+  const recent = buildDashboardApplicationStatistics(rows, "2026-09-24", "recent30");
+  assert.equal(recent.total, 2);
+  assert.equal(recent.trend.reduce((sum, point) => sum + point.count, 0), 2);
 });

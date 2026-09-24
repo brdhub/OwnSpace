@@ -75,6 +75,41 @@ export const applications = sqliteTable(
   }),
 );
 
+export const applicationStatusEvents = sqliteTable(
+  "application_status_events",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    applicationId: integer("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
+    fromStatus: text("from_status", { enum: applicationStatuses }),
+    toStatus: text("to_status", { enum: applicationStatuses }).notNull(),
+    kind: text("kind", { enum: ["baseline", "created", "changed", "manual"] }).notNull(),
+    occurredAt: text("occurred_at").notNull(),
+  },
+  (table) => ({
+    applicationIndex: index("application_status_events_application_id_idx").on(table.applicationId, table.id),
+  }),
+);
+
+export const interviewSimulations = sqliteTable("interview_simulations", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  applicationId: integer("application_id").references(() => applications.id, { onDelete: "set null" }),
+  company: text("company").notNull(),
+  role: text("role").notNull(),
+  jdSnapshot: text("jd_snapshot").notNull(),
+  resumeName: text("resume_name").notNull(),
+  resumeSnapshot: text("resume_snapshot").notNull(),
+  model: text("model").notNull(),
+  questionsJson: text("questions_json").notNull(),
+  phase: text("phase", { enum: ["main_answer", "followup_answer", "evaluating_main", "evaluating_followup", "complete"] }).notNull().default("main_answer"),
+  currentIndex: integer("current_index").notNull().default(0),
+  busy: integer("busy", { mode: "boolean" }).notNull().default(false),
+  revision: integer("revision").notNull().default(0),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => ({
+  applicationIndex: index("interview_simulations_application_id_idx").on(table.applicationId),
+}));
+
 export const dailyActions = sqliteTable("daily_actions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   actionDate: text("action_date").notNull().unique(),
@@ -402,6 +437,7 @@ export const resumeAiRuns = sqliteTable(
 
 
 export type Application = typeof applications.$inferSelect;
+export type ApplicationStatusEvent = typeof applicationStatusEvents.$inferSelect;
 export type NewApplication = typeof applications.$inferInsert;
 export type RecruitmentOpportunity = typeof recruitmentOpportunities.$inferSelect;
 export type NewRecruitmentOpportunity = typeof recruitmentOpportunities.$inferInsert;

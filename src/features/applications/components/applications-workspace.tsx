@@ -1,9 +1,9 @@
 "use client";
 
-import { Edit3, ExternalLink, FilePlus2, FileSearch, Image as ImageIcon, MessagesSquare, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Edit3, ExternalLink, FilePlus2, FileSearch, Image as ImageIcon, MessagesSquare, Plus, Search, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, useMemo, useOptimistic, useState, useTransition } from "react";
+import { type FormEvent, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { EmptyState } from "@/components/layout/empty-state";
 import { Button } from "@/components/ui/button";
@@ -12,10 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { applicationStatusMeta, applicationStatuses } from "@/config/application-status";
-import type { Application } from "@/db/schema";
-import { matchMissingJobCategoriesAction, deleteApplicationAction, updateApplicationStatusAction } from "@/features/applications/actions";
+import type { Application, ApplicationStatusEvent } from "@/db/schema";
+import { matchMissingJobCategoriesAction, updateApplicationStatusAction } from "@/features/applications/actions";
 import { ApplicationForm } from "@/features/applications/components/application-form";
-import { ApplicationsNavigation } from "@/features/applications/components/applications-navigation";
+import { ApplicationDetail } from "@/features/applications/components/application-detail";
+import { ApplicationQuickLinks } from "@/features/applications/components/application-quick-links";
 import { ApplicationImageExport } from "@/features/applications/components/application-image-export";
 import { StatusBadge } from "@/features/applications/components/status-badge";
 import { applicationCities, jobCategories, jobCategoryLabels, companySizeMeta, internshipTypeMeta, internshipTypes } from "@/features/applications/constants";
@@ -31,6 +32,7 @@ import type { ResumeAssetOption } from "@/features/resumes/types";
 
 type ApplicationsWorkspaceProps = {
   applications: Array<Application & { interviewCount: number; resumeAssetName: string | null }>;
+  statusEvents: Record<number, ApplicationStatusEvent[]>;
   resumeAssets: ResumeAssetOption[];
   city?: string;
   jobCategory?: ResolvedApplicationFilters["jobCategory"];
@@ -90,11 +92,13 @@ function ApplicationCard({
   application,
   statusError,
   onEdit,
+  onDetail,
   onStatusUpdate,
 }: {
   application: ApplicationRow;
   statusError?: string;
   onEdit: (application: Application) => void;
+  onDetail: (applicationId: number) => void;
   onStatusUpdate: (formData: FormData) => Promise<void>;
 }) {
   const internshipMeta = internshipTypeMeta[application.internshipType];
@@ -164,12 +168,9 @@ function ApplicationCard({
           <Button type="button" variant="outline" size="icon" onClick={() => onEdit(application)} aria-label="编辑投递记录">
             <Edit3 className="h-4 w-4" />
           </Button>
-          <form action={deleteApplicationAction}>
-            <input type="hidden" name="id" value={application.id} />
-            <Button type="submit" variant="ghost" size="icon" aria-label="删除投递记录">
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </form>
+          <Button type="button" variant="ghost" size="icon" onClick={() => onDetail(application.id)} aria-label={`查看${application.company}投递详情`} title="查看状态轨迹">
+            <ChevronRight className="h-5 w-5" />
+          </Button>
         </div>
         {application.notes ? <p className="border-t border-border pt-3 text-sm leading-6 text-muted-foreground lg:col-span-4">{application.notes}</p> : null}
       </CardContent>
@@ -179,6 +180,7 @@ function ApplicationCard({
 
 export function ApplicationsWorkspace({
   applications,
+  statusEvents,
   resumeAssets,
   city = "all",
   jobCategory = "all",
@@ -189,8 +191,12 @@ export function ApplicationsWorkspace({
   const [isMatching, startMatching] = useTransition();
   const [matchMessage, setMatchMessage] = useState("");
   const [editing, setEditing] = useState<Application | null>(null);
+  const [detailApplicationId, setDetailApplicationId] = useState<number | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
+  const filterPanelRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -205,6 +211,24 @@ export function ApplicationsWorkspace({
       ),
   );
 
+  useEffect(() => {
+    if (!isFiltersOpen) return;
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!(event.target instanceof Node)) return;
+      if (filterButtonRef.current?.contains(event.target) || filterPanelRef.current?.contains(event.target)) return;
+      setIsFiltersOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsFiltersOpen(false);
+    }
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isFiltersOpen]);
+
   const modalTitle = useMemo(() => {
     if (editing) {
       return "编辑投递记录";
@@ -216,6 +240,8 @@ export function ApplicationsWorkspace({
   }, [editing, isCreating]);
 
   const applicationGroups = useMemo(() => groupApplications(optimisticApplications), [optimisticApplications]);
+  const detailApplication = optimisticApplications.find((application) => application.id === detailApplicationId);
+  const activeFilterCount = [query.trim() !== "", status !== "all", internshipType !== "all", city !== "all", jobCategory !== "all"].filter(Boolean).length;
 
   function updateFilter(next: Partial<ResolvedApplicationFilters>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -291,35 +317,45 @@ export function ApplicationsWorkspace({
 
   return (
     <div className="space-y-5">
-      <ApplicationsNavigation />
       <div>
-        <div className="flex flex-col items-center gap-3 sm:grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
-          <Button type="button" onClick={() => setIsExportOpen((value) => !value)} className="bg-teal-700 text-white hover:bg-teal-800 sm:justify-self-end">
-            <ImageIcon className="h-4 w-4" />
-            {isExportOpen ? "收起导出" : "投递导出"}
-          </Button>
+        <div className="flex flex-col items-center gap-3 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+          <div className="flex flex-wrap items-center justify-center gap-3 lg:justify-end">
+            <Button ref={filterButtonRef} type="button" variant="outline" aria-controls="application-filters" aria-expanded={isFiltersOpen} onClick={() => setIsFiltersOpen((value) => !value)}>
+              <SlidersHorizontal className="h-4 w-4" />
+              筛选
+              {activeFilterCount > 0 ? <span className="rounded-full bg-muted px-1.5 text-xs tabular-nums">{activeFilterCount}</span> : null}
+              <ChevronDown className={cn("h-4 w-4 transition-transform", isFiltersOpen && "rotate-180")} />
+            </Button>
+            <Button type="button" onClick={() => setIsExportOpen((value) => !value)} className="bg-teal-700 text-white hover:bg-teal-800">
+              <ImageIcon className="h-4 w-4" />
+              {isExportOpen ? "收起导出" : "投递导出"}
+            </Button>
+          </div>
           <Button
             type="button"
             aria-label="新增投递"
             title="新增投递"
             onClick={() => setIsCreating(true)}
-            className="group h-12 w-12 gap-0 overflow-hidden rounded-full p-0 transition-[width] duration-200 hover:w-36 hover:gap-2 focus-visible:w-36 focus-visible:gap-2 motion-reduce:transition-none"
+            className="group h-14 w-14 gap-0 overflow-hidden rounded-full p-0 transition-[width] duration-200 hover:w-40 hover:gap-2 focus-visible:w-40 focus-visible:gap-2 motion-reduce:transition-none"
           >
-            <Plus className="h-5 w-5 shrink-0" />
+            <Plus className="h-7 w-7 shrink-0" />
             <span className="max-w-0 overflow-hidden opacity-0 transition-[max-width,opacity] duration-200 group-hover:max-w-24 group-hover:opacity-100 group-focus-visible:max-w-24 group-focus-visible:opacity-100 motion-reduce:transition-none">新增投递</span>
           </Button>
-          <Button type="button" variant="outline" disabled={isMatching} className="sm:justify-self-start" onClick={() => startMatching(async () => {
-            setMatchMessage("");
-            try {
-              const result = await matchMissingJobCategoriesAction({ scope: "all_missing" });
-              setMatchMessage(result.message ?? "匹配已完成。");
-              if (result.success) router.refresh();
-            } catch { setMatchMessage("匹配未完成，请重试。"); }
-          })}>{isMatching ? "匹配中..." : "匹配缺失类型"}</Button>
+          <div className="flex flex-wrap items-center justify-center gap-3 lg:justify-start">
+            <Button type="button" variant="outline" disabled={isMatching} onClick={() => startMatching(async () => {
+              setMatchMessage("");
+              try {
+                const result = await matchMissingJobCategoriesAction({ scope: "all_missing" });
+                setMatchMessage(result.message ?? "匹配已完成。");
+                if (result.success) router.refresh();
+              } catch { setMatchMessage("匹配未完成，请重试。"); }
+            })}>{isMatching ? "匹配中..." : "匹配缺失类型"}</Button>
+            <ApplicationQuickLinks applications={optimisticApplications} />
+          </div>
         </div>
         {matchMessage ? <p className="mt-2 text-center text-sm text-muted-foreground" role="status">{matchMessage}</p> : null}
       </div>
-      <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:flex-wrap sm:items-end">
+      {isFiltersOpen ? <div ref={filterPanelRef} id="application-filters" className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 sm:flex-row sm:flex-wrap sm:items-end">
         <form onSubmit={handleSearch} className="flex-1 space-y-2">
           <Label htmlFor="application-search">搜索</Label>
           <div className="flex gap-2">
@@ -397,7 +433,7 @@ export function ApplicationsWorkspace({
             <option value="missing">未填写</option>
           </Select>
         </div>
-      </div>
+      </div> : null}
       {isExportOpen ? <ApplicationImageExport applications={optimisticApplications} onClose={() => setIsExportOpen(false)} /> : null}
 
       {optimisticApplications.length === 0 ? (
@@ -414,6 +450,7 @@ export function ApplicationsWorkspace({
                   application={topApplication}
                   statusError={statusErrors[topApplication.id]}
                   onEdit={setEditing}
+                  onDetail={setDetailApplicationId}
                   onStatusUpdate={handleStatusUpdate}
                 />
                 {otherApplications.length ? (
@@ -425,6 +462,7 @@ export function ApplicationsWorkspace({
                           application={application}
                           statusError={statusErrors[application.id]}
                           onEdit={setEditing}
+                          onDetail={setDetailApplicationId}
                           onStatusUpdate={handleStatusUpdate}
                         />
                       ))
@@ -453,13 +491,11 @@ export function ApplicationsWorkspace({
       )}
 
       {editing || isCreating ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/20 px-4 py-8">
-          <div className="max-h-full w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-card p-5 shadow-lg">
-            <h2 className="mb-4 text-lg font-semibold">{modalTitle}</h2>
-            <ApplicationForm application={editing ?? undefined} resumeAssets={resumeAssets} onDone={closeForm} />
-          </div>
+        <div role="dialog" aria-modal="true" aria-labelledby="application-form-title" className="fixed inset-0 z-50 grid place-items-center bg-slate-950/35 px-3 py-4 backdrop-blur-[2px] sm:px-6 sm:py-8">
+          <ApplicationForm application={editing ?? undefined} resumeAssets={resumeAssets} onDone={closeForm} modalTitle={modalTitle} modalSubtitle={editing ? `${editing.company} · ${editing.role}` : "记下新的机会和投递进度"} />
         </div>
       ) : null}
+      {detailApplication ? <ApplicationDetail application={detailApplication} events={statusEvents[detailApplication.id] ?? []} onClose={() => setDetailApplicationId(null)} /> : null}
     </div>
   );
 }

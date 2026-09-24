@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { applicationFormSchema } from "@/features/applications/schemas";
+import { addHistoricalStatusSchema, applicationFormSchema } from "@/features/applications/schemas";
 
 const validApplication = {
   company: "浪潮集团",
@@ -35,4 +35,11 @@ test("accepts an empty or complete optional job description", () => {
     applicationFormSchema.safeParse({ ...validApplication, jobDescription: "岗".repeat(20_001) }).success,
     false,
   );
+});
+
+test("historical status entries require a real past date and a known status", () => {
+  assert.equal(addHistoricalStatusSchema.safeParse({ id: 1, date: "2025-09-01", status: "applied" }).success, true);
+  assert.equal(addHistoricalStatusSchema.safeParse({ id: 1, date: "2025-02-30", status: "applied" }).success, false);
+  assert.equal(addHistoricalStatusSchema.safeParse({ id: 1, date: "2099-01-01", status: "applied" }).success, false);
+  assert.equal(addHistoricalStatusSchema.safeParse({ id: 1, date: "2025-09-01", status: "unknown" }).success, false);
 });

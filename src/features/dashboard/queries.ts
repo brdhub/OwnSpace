@@ -1,6 +1,5 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { applications, interviewNotes, journalEntries, recruitmentOpportunities, studyCheckins } from "@/db/schema";
+import { applications, interviewNotes, journalEntries, studyCheckins } from "@/db/schema";
 import { buildCalendarActivityDays, type CalendarActivityDay } from "@/features/dashboard/calendar-activity";
 
 export type { CalendarActivityDay } from "@/features/dashboard/calendar-activity";
@@ -13,32 +12,6 @@ export type CalendarInterviewEvent = {
   role: string;
   source: "application" | "interviewNote";
 };
-
-export type RecommendedOpportunity = {
-  id: number;
-  company: string;
-  roles: string;
-  cities: string;
-  deadline: string;
-  writtenTestWaived: boolean;
-};
-
-export async function getRecommendedOpportunities(): Promise<RecommendedOpportunity[]> {
-  return db
-    .select({
-      id: recruitmentOpportunities.id,
-      company: recruitmentOpportunities.company,
-      roles: recruitmentOpportunities.roles,
-      cities: recruitmentOpportunities.cities,
-      deadline: recruitmentOpportunities.deadline,
-      writtenTestWaived: recruitmentOpportunities.writtenTestWaived,
-    })
-    .from(recruitmentOpportunities)
-    .leftJoin(applications, eq(applications.opportunityId, recruitmentOpportunities.id))
-    .where(and(eq(recruitmentOpportunities.isActive, true), isNull(applications.id)))
-    .orderBy(desc(recruitmentOpportunities.sourceUpdatedDate), recruitmentOpportunities.company)
-    .limit(12);
-}
 
 export async function getCalendarActivityDays(): Promise<CalendarActivityDay[]> {
   const [journalRows, studyRows, applicationRows] = await Promise.all([

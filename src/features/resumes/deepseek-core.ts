@@ -178,6 +178,14 @@ async function requestJson(
   return result.output;
 }
 
+export async function requestDeepSeekJson(
+  messages: DeepSeekMessage[],
+  dependencies: DeepSeekDependencies = {},
+  options: DeepSeekRequestOptions = {},
+): Promise<unknown> {
+  return requestJson(messages, dependencies, options);
+}
+
 export async function requestOptimizationOnce(
   input: OptimizationPromptInput,
   feedback?: OptimizationFeedback,

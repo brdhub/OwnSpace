@@ -2,11 +2,11 @@
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { aiToolGroups } from "@/config/ai-tools";
-import { InterviewSimulatorEntry } from "@/features/ai-hub/components/interview-simulator-entry";
-import { getApplicationAiContext } from "@/features/applications/queries";
+import { InterviewSimulator } from "@/features/ai-hub/components/interview-simulator";
+import { getInterviewSession, getInterviewSessions, getInterviewSetup } from "@/features/ai-hub/interview-queries";
 
 type AiHubPageProps = {
-  searchParams: Promise<{ applicationId?: string }>;
+  searchParams: Promise<{ applicationId?: string; sessionId?: string }>;
 };
 
 function parseApplicationId(value?: string) {
@@ -18,17 +18,19 @@ function parseApplicationId(value?: string) {
 export default async function AiHubPage({ searchParams }: AiHubPageProps) {
   const params = await searchParams;
   const requestedApplicationId = parseApplicationId(params.applicationId);
-  const applicationContext = requestedApplicationId
-    ? await getApplicationAiContext(requestedApplicationId)
-    : null;
-  const applicationContextError = params.applicationId && !applicationContext
+  const [setup, sessions, session] = await Promise.all([
+    getInterviewSetup(requestedApplicationId),
+    getInterviewSessions(),
+    getInterviewSession(parseApplicationId(params.sessionId)),
+  ]);
+  const applicationContextError = params.applicationId && !setup.application
     ? "未找到对应投递，请从投递记录重新进入。"
     : undefined;
 
   return (
     <PageContainer title="AI 工具">
       <div className="space-y-6">
-        <InterviewSimulatorEntry context={applicationContext} contextError={applicationContextError} />
+        <InterviewSimulator setup={setup} sessions={sessions} session={session} contextError={applicationContextError} />
         {aiToolGroups.map((group) => (
           <section key={group.title} className="space-y-3">
             <h2 className="text-sm font-semibold text-muted-foreground">{group.title}</h2>

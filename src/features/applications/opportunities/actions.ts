@@ -23,7 +23,7 @@ export async function syncRecruitmentOpportunitiesAction(
   try {
     const snapshot = await fetchFeishuOpportunities();
     const result = syncRecruitmentOpportunities(snapshot);
-    revalidatePath("/applications/opportunities");
+    revalidatePath("/resumes/opportunities");
     return {
       success: true,
       message: `同步完成：新增 ${result.inserted} 条，更新 ${result.updated} 条，当前开放 ${result.active} 条。`,
@@ -49,7 +49,7 @@ export async function favoriteOpportunityAction(
 
   try {
     const result = favoriteOpportunity(parsed.data.opportunityId, toDateInputValue());
-    revalidatePath("/applications/opportunities");
+    revalidatePath("/resumes/opportunities");
     revalidatePath("/applications");
     revalidatePath("/");
     return { success: true, message: result.created ? "已加入计划中" : "计划记录已更新" };

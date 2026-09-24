@@ -16,6 +16,8 @@ export type ApplicationStatistics = {
   trend: StatisticsPoint[];
 };
 
+export type DashboardStatisticsPeriod = "all" | "recent30";
+
 function dateFromKey(key: string) {
   const [year, month, day] = key.split("-").map(Number);
   return new Date(Date.UTC(year, month - 1, day));
@@ -68,4 +70,21 @@ export function buildApplicationStatistics(rows: StatisticsRow[], startDate: str
   }
 
   return { total: rows.length, statusCounts, typeCounts, trend };
+}
+
+export function buildDashboardApplicationStatistics(rows: StatisticsRow[], today: string, period: DashboardStatisticsPeriod) {
+  if (period === "recent30") {
+    const start = dateFromKey(today);
+    start.setUTCDate(start.getUTCDate() - 29);
+    const startDate = dateKey(start);
+    return buildApplicationStatistics(
+      rows.filter((row) => row.appliedDate >= startDate && row.appliedDate <= today),
+      startDate,
+      today,
+    );
+  }
+
+  const dates = rows.map((row) => row.appliedDate).sort();
+  const latestDate = dates.at(-1) ?? today;
+  return buildApplicationStatistics(rows, dates[0] ?? today, latestDate > today ? latestDate : today);
 }

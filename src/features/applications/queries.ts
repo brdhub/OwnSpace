@@ -1,8 +1,7 @@
 import { and, desc, eq, inArray, isNull, notInArray, like, or } from "drizzle-orm";
-import { applicationStatuses } from "@/config/application-status";
 import { db } from "@/db";
-import { applications, resumeAssets } from "@/db/schema";
-import { internshipTypes, applicationCities } from "@/features/applications/constants";
+import { applications, applicationStatusEvents, resumeAssets, type ApplicationStatusEvent } from "@/db/schema";
+import { applicationCities } from "@/features/applications/constants";
 import { getApplicationStatusesForFilter, type ResolvedApplicationFilters } from "@/features/applications/filters";
 import { getInterviewCountsByApplication } from "@/features/interviews/queries";
 import type { ApplicationAiContext, ApplicationJdContext } from "@/features/applications/jd-context";
@@ -45,21 +44,23 @@ export async function getApplications(filters: ResolvedApplicationFilters) {
   }));
 }
 
-export async function getApplicationStats() {
-  const rows = await db
-    .select({ status: applications.status, internshipType: applications.internshipType })
-    .from(applications);
+export async function getApplicationStatisticsRows() {
+  return db.select({
+    appliedDate: applications.appliedDate,
+    status: applications.status,
+    internshipType: applications.internshipType,
+  }).from(applications);
+}
 
-  return {
-    statusStats: applicationStatuses.map((status) => ({
-      status,
-      count: rows.filter((row) => row.status === status).length,
-    })),
-    internshipTypeStats: internshipTypes.map((internshipType) => ({
-      internshipType,
-      count: rows.filter((row) => row.internshipType === internshipType).length,
-    })),
-  };
+export async function getApplicationStatusEvents(applicationIds: number[]) {
+  if (applicationIds.length === 0) return {} as Record<number, ApplicationStatusEvent[]>;
+  const events = await db.select().from(applicationStatusEvents)
+    .where(inArray(applicationStatusEvents.applicationId, applicationIds))
+    .orderBy(desc(applicationStatusEvents.occurredAt), desc(applicationStatusEvents.id));
+  return events.reduce<Record<number, ApplicationStatusEvent[]>>((grouped, event) => {
+    (grouped[event.applicationId] ??= []).push(event);
+    return grouped;
+  }, {});
 }
 
 export async function getApplicationJdContext(applicationId: number): Promise<ApplicationJdContext | null> {

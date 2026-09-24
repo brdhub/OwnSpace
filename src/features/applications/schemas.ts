@@ -1,6 +1,7 @@
 ﻿import { z } from "zod";
 import { applicationStatuses } from "@/config/application-status";
 import { companySizes, internshipTypes, jobCategories } from "@/features/applications/constants";
+import { toDateInputValue } from "@/lib/date";
 
 export const applicationFormSchema = z.object({
   opportunityId: z.preprocess(
@@ -48,5 +49,12 @@ export const updateApplicationStatusSchema = applicationIdSchema.merge(
     status: z.enum(applicationStatuses, { required_error: "请选择当前状态" }),
   }),
 );
+
+export const addHistoricalStatusSchema = applicationIdSchema.merge(z.object({
+  status: z.enum(applicationStatuses, { required_error: "请选择状态" }),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "请选择有效日期")
+    .refine((value) => !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value, "请选择有效日期")
+    .refine((value) => value <= toDateInputValue(), "不能补录未来日期"),
+})).strict();
 
 export type ApplicationFormValues = z.infer<typeof applicationFormSchema>;

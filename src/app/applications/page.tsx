@@ -1,5 +1,5 @@
 import { PageContainer } from "@/components/layout/page-container";
-import { getApplications } from "@/features/applications/queries";
+import { getApplications, getApplicationStatusEvents } from "@/features/applications/queries";
 import { getResumeAssetOptions } from "@/features/resumes/queries";
 import { ApplicationsWorkspace } from "@/features/applications/components/applications-workspace";
 import { resolveApplicationFilters } from "@/features/applications/filters";
@@ -19,11 +19,13 @@ type ApplicationsPageProps = {
 export default async function ApplicationsPage({ searchParams }: ApplicationsPageProps) {
   const filters = resolveApplicationFilters(await searchParams);
   const [rows, resumeAssets] = await Promise.all([getApplications(filters), getResumeAssetOptions()]);
+  const statusEvents = await getApplicationStatusEvents(rows.map((row) => row.id));
 
   return (
     <PageContainer title="投递记录">
       <ApplicationsWorkspace
         applications={rows}
+        statusEvents={statusEvents}
         city={filters.city}
         jobCategory={filters.jobCategory}
         query={filters.query}

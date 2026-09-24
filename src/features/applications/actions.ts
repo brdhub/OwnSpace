@@ -5,8 +5,9 @@ import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { matchJobCategory } from "@/features/applications/job-category";
 import { db } from "@/db";
-import { applications, interviewNotes, resumeAssets } from "@/db/schema";
+import { applications, applicationStatusEvents, interviewNotes, resumeAssets } from "@/db/schema";
 import {
+  addHistoricalStatusSchema,
   applicationFormSchema,
   applicationIdSchema,
   updateApplicationSchema,
@@ -77,7 +78,7 @@ export async function createApplicationAction(
 
   revalidatePath("/");
   revalidatePath("/applications");
-  revalidatePath("/applications/opportunities");
+  revalidatePath("/resumes/opportunities");
   return { success: true, message: "投递记录已新增" };
 }
 
@@ -113,7 +114,7 @@ export async function updateApplicationAction(
 
   revalidatePath("/");
   revalidatePath("/applications");
-  revalidatePath("/applications/opportunities");
+  revalidatePath("/resumes/opportunities");
   return { success: true, message: "投递记录已更新" };
 }
 
@@ -144,6 +145,25 @@ export async function updateApplicationStatusAction(formData: FormData): Promise
   revalidatePath("/");
   revalidatePath("/applications");
   return { success: true };
+}
+
+export async function addHistoricalStatusAction(input: unknown): Promise<ApplicationActionState> {
+  const parsed = addHistoricalStatusSchema.safeParse(input);
+  if (!parsed.success) return { success: false, message: parsed.error.flatten().fieldErrors.date?.[0] ?? "补录信息无效，请检查日期和状态。" };
+
+  const application = await db.select({ id: applications.id }).from(applications)
+    .where(eq(applications.id, parsed.data.id)).get();
+  if (!application) return { success: false, message: "投递记录不存在。" };
+
+  await db.insert(applicationStatusEvents).values({
+    applicationId: application.id,
+    fromStatus: null,
+    toStatus: parsed.data.status,
+    kind: "manual",
+    occurredAt: parsed.data.date,
+  });
+  revalidatePath("/applications");
+  return { success: true, message: "历史状态已补录" };
 }
 
 export async function matchMissingJobCategoriesAction(input: unknown): Promise<ApplicationActionState> {
