@@ -42,3 +42,23 @@ test("状态历史迁移保留旧记录快照，并只记录真实状态变化",
     sqlite.close();
   }
 });
+
+test("轮次迁移保留旧数据，二面到三面会留痕，相同轮次不会重复记录", () => {
+  const sqlite = new Database(":memory:");
+  try {
+    sqlite.exec("CREATE TABLE applications (id integer PRIMARY KEY, status text NOT NULL, created_at text NOT NULL, updated_at text NOT NULL, notes text)");
+    sqlite.exec("INSERT INTO applications VALUES (1, 'laterInterview', '2025-01-01', '2025-01-01', '保留备注')");
+    for (const file of ["0024_mute_stryfe.sql", "0026_application_interview_round.sql"]) {
+      for (const statement of readFileSync(join(process.cwd(), "drizzle", file), "utf8").split("--> statement-breakpoint")) sqlite.exec(statement);
+    }
+    assert.deepEqual(sqlite.prepare("SELECT notes, interview_round FROM applications WHERE id=1").get(), {notes: "保留备注", interview_round: null});
+    sqlite.exec("UPDATE applications SET interview_round=2 WHERE id=1");
+    sqlite.exec("UPDATE applications SET interview_round=3 WHERE id=1");
+    sqlite.exec("UPDATE applications SET status='laterInterview', interview_round=3 WHERE id=1");
+    assert.deepEqual(sqlite.prepare("SELECT interview_round FROM application_status_events ORDER BY id").all(), [{interview_round: null}, {interview_round: 2}, {interview_round: 3}]);
+    sqlite.exec("UPDATE applications SET status='offer', interview_round=NULL WHERE id=1");
+    assert.deepEqual(sqlite.prepare("SELECT to_status, interview_round FROM application_status_events ORDER BY id DESC LIMIT 1").get(), {to_status: "offer", interview_round: null});
+    sqlite.exec("INSERT INTO applications (id,status,created_at,updated_at,interview_round) VALUES (2,'laterInterview','2025-01-02','2025-01-02',4)");
+    assert.deepEqual(sqlite.prepare("SELECT interview_round FROM application_status_events WHERE application_id=2").get(), {interview_round: 4});
+  } finally {sqlite.close();}
+});

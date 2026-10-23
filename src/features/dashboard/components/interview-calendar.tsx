@@ -88,7 +88,7 @@ export function InterviewCalendar({ events, activityDays }: InterviewCalendarPro
   }
 
   return (
-    <Card className="w-full max-w-md overflow-visible">
+    <Card className="w-full overflow-visible rounded-2xl">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border px-4 py-3">
         <CardTitle className="text-base">日历</CardTitle>
         <div className="flex items-center gap-1">
@@ -102,7 +102,7 @@ export function InterviewCalendar({ events, activityDays }: InterviewCalendarPro
         </div>
       </CardHeader>
       <CardContent className="p-4">
-        <div className="max-w-[300px]">
+        <div className="mx-auto max-w-[360px]">
           <div className="mb-1 grid grid-cols-7 gap-1">
             {weekdayLabels.map((label) => (
               <div key={label} className="text-center text-[11px] font-medium text-muted-foreground">
@@ -193,7 +193,7 @@ export function InterviewCalendar({ events, activityDays }: InterviewCalendarPro
         </div>
 
         {selectedDate ? (
-          <div className="mt-4 max-w-[300px] border-t border-border pt-3">
+          <div className="mx-auto mt-4 max-w-[360px] border-t border-border pt-3">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-semibold text-foreground">{fullDateTitle(selectedDate)}</p>
               <p className="text-xs text-muted-foreground">学习 {selectedActivity?.completedStudyCount ?? 0}/4</p>

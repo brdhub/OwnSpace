@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { appRelease, appReleases } from "@/config/app-version";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { navigationItems } from "@/config/navigation";
 import { cn } from "@/lib/utils";
 
@@ -93,6 +94,7 @@ export function Sidebar() {
             );
           })}
         </nav>
+        <div className="flex justify-center px-4 pb-4 pt-3 lg:border-t lg:border-border"><ThemeToggle /></div>
       </div>
     </aside>
   );

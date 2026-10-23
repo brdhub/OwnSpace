@@ -9,9 +9,12 @@ import { createResumableGraph } from './resumable-graph';
 import { getCheckpointStore } from './checkpoint-store';
 import { createRecoveryService, type RecoveryRun } from './recovery-service';
 import { invokeRecoveryGraph } from './recovery-runner';
+import { AGENT_WORKFLOW_VERSION } from '../agent/contracts';
+import { createResumeAgent, invokeResumeAgent } from '../agent/graph';
+import { requestAgentTurn } from '../agent/provider';
 
 const service=createRecoveryService(db);
-const startSchema=z.object({taskId:z.coerce.number().int().positive(),inputRevision:z.coerce.number().int().positive(),materialId:z.coerce.number().int().positive().optional()});
+const startSchema=z.object({taskId:z.coerce.number().int().positive(),inputRevision:z.coerce.number().int().positive(),materialId:z.coerce.number().int().positive().optional(),mode:z.enum(['quick','agent']).default('quick')});
 const resumeSchema=z.object({runId:z.string().uuid(),facts:z.string().trim().max(4000).optional()});
 function refresh(){revalidatePath('/resumes','layout');}
 function failure(error:unknown):ResumeActionState {
@@ -20,18 +23,30 @@ function failure(error:unknown):ResumeActionState {
 
 async function execute(run:RecoveryRun,resuming:boolean,facts?:string):Promise<ResumeActionState> {
   try {
-    const graph=createResumableGraph({
+    const shared={
       checkpointer:getCheckpointStore(),
       beforeCall:async()=>{service.reserveCall(run);},
-      onStage:async stage=>{service.stage(run,stage);},
-      generate:async(input,feedback)=>{
-        const started=Date.now();
-        const response=await requestOptimizationOnce(input,feedback);
-        service.recordUsage(run,response,Date.now()-started);
-        return response;
-      },
-    });
-    const result=await invokeRecoveryGraph(graph,run,resuming,facts);
+      onStage:async (stage:string)=>{service.stage(run,stage);},
+    };
+    const result=run.promptVersion===AGENT_WORKFLOW_VERSION
+      ? await invokeResumeAgent(createResumeAgent({
+        ...shared,
+        generate:async messages=>{
+          const started=Date.now();
+          const response=await requestAgentTurn(messages);
+          service.recordUsage(run,response,Date.now()-started);
+          return response;
+        },
+      }),run,resuming,facts)
+      : await invokeRecoveryGraph(createResumableGraph({
+        ...shared,
+        generate:async(input,feedback)=>{
+          const started=Date.now();
+          const response=await requestOptimizationOnce(input,feedback);
+          service.recordUsage(run,response,Date.now()-started);
+          return response;
+        },
+      }),run,resuming,facts);
     if(result.waiting) {
       service.waitForFacts(run);
       return {success:true,taskId:run.taskId!,message:'已保存等待进度，请补充这条经历的真实信息，或跳过补充。'};
@@ -48,7 +63,7 @@ async function execute(run:RecoveryRun,resuming:boolean,facts?:string):Promise<R
 export async function startResumableOptimizationAction(_previous:ResumeActionState,formData:FormData):Promise<ResumeActionState> {
   try {
     const input=startSchema.parse(Object.fromEntries(formData));
-    const run=service.start(input.taskId,input.inputRevision,getDeepSeekConfig().model,input.materialId);
+    const run=service.start(input.taskId,input.inputRevision,getDeepSeekConfig().model,input.materialId,input.mode);
     return await execute(run,false);
   } catch(error){refresh();return failure(error);}
 }

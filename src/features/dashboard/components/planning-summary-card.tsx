@@ -33,7 +33,7 @@ function SummaryRow({ label, event }: { label: string; event: PlanningEvent | nu
 
 export function PlanningSummaryCard({ nextTask, latestProgress, hasUserEvents }: PlanningSummaryCardProps) {
   return (
-    <details className="group rounded-lg border border-border bg-card p-5">
+    <details open className="group rounded-2xl border border-border bg-card p-5">
       <summary className="flex cursor-pointer list-none items-start justify-between gap-3 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
         <div>
           <h2 className="text-base font-semibold">长期规划</h2>
@@ -45,7 +45,7 @@ export function PlanningSummaryCard({ nextTask, latestProgress, hasUserEvents }:
         />
       </summary>
       <div className="mt-4 border-t border-border pt-4">
-        <div className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <SummaryRow label="下一项任务" event={nextTask} />
           <SummaryRow label="最近进度" event={latestProgress} />
         </div>

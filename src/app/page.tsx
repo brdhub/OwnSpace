@@ -26,7 +26,7 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <PageContainer title="首页">
+    <PageContainer title="个人总览">
       <DashboardView
         applicationStatisticsRows={applicationStatisticsRows}
         calendarEvents={calendarEvents}

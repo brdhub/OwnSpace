@@ -64,6 +64,7 @@ export const applications = sqliteTable(
     companySize: text("company_size", { enum: companySizes }).notNull().default("medium"),
     appliedDate: text("applied_date").notNull(),
     interviewTime: text("interview_time"),
+    interviewRound: integer("interview_round"),
     applicationUrl: text("application_url"),
     jobDescription: text("job_description").notNull().default(""),
     notes: text("notes").notNull().default(""),
@@ -82,6 +83,7 @@ export const applicationStatusEvents = sqliteTable(
     applicationId: integer("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
     fromStatus: text("from_status", { enum: applicationStatuses }),
     toStatus: text("to_status", { enum: applicationStatuses }).notNull(),
+    interviewRound: integer("interview_round"),
     kind: text("kind", { enum: ["baseline", "created", "changed", "manual"] }).notNull(),
     occurredAt: text("occurred_at").notNull(),
   },
@@ -283,6 +285,21 @@ export const resumeEntries = sqliteTable("resume_entries", {
   tagsJson: text("tags_json").notNull().default("[]"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const githubResumeRuns = sqliteTable('github_resume_runs', {
+  id: text('id').primaryKey(),
+  status: text('status', {enum: ['ready', 'running', 'waiting', 'completed', 'failed', 'accepted']}).notNull().default('ready'),
+  inputJson: text('input_json').notNull(),
+  viewJson: text('view_json').notNull().default('{}'),
+  callCount: integer('call_count').notNull().default(0),
+  requestCount: integer('request_count').notNull().default(0),
+  leaseToken: text('lease_token'),
+  leaseUntil: integer('lease_until').notNull().default(0),
+  error: text('error'),
+  entryId: integer('entry_id').references(() => resumeEntries.id, {onDelete: 'set null'}),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
 });
 
 export const resumeEntryCandidates = sqliteTable(

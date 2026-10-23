@@ -34,6 +34,27 @@
   --radius: 0.5rem;
 }
 
+html.dark {
+  color-scheme: dark;
+  --background: 178 27% 8%;
+  --foreground: 45 25% 94%;
+  --card: 177 23% 13%;
+  --card-foreground: 45 25% 94%;
+  --primary: 165 53% 66%;
+  --primary-foreground: 177 39% 11%;
+  --secondary: 176 21% 19%;
+  --secondary-foreground: 45 25% 94%;
+  --muted: 176 18% 20%;
+  --muted-foreground: 169 12% 71%;
+  --accent: 174 25% 23%;
+  --accent-foreground: 166 48% 87%;
+  --destructive: 0 76% 69%;
+  --destructive-foreground: 177 39% 10%;
+  --border: 174 18% 29%;
+  --input: 174 18% 32%;
+  --ring: 165 53% 66%;
+}
+
 * {
   border-color: hsl(var(--border));
 }
@@ -43,9 +64,84 @@ body {
   color: hsl(var(--foreground));
 }
 
+html.dark .app-shell {
+  background: radial-gradient(circle at 76% -12%, rgb(32 113 103 / 22%), transparent 38%), hsl(var(--background));
+}
+
+html.dark .application-card {
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+  box-shadow: 0 10px 24px rgb(0 0 0 / 12%);
+}
+
+html.dark .application-card:hover { border-color: hsl(var(--primary) / 55%); }
+
+html.dark .application-card select[name="status"] {
+  background: hsl(var(--secondary));
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--border));
+}
+
+html.dark .application-form,
+html.dark .application-detail,
+html.dark .application-delete-confirm {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+  border-color: hsl(var(--border));
+}
+
+html.dark .application-form-header {
+  background: linear-gradient(100deg, hsl(177 28% 17%), hsl(var(--card)));
+  border-color: hsl(var(--border));
+}
+
+html.dark .application-form .text-slate-900,
+html.dark .application-form .text-slate-800,
+html.dark .application-detail .text-slate-900,
+html.dark .application-delete-confirm .text-slate-900 { color: hsl(var(--foreground)); }
+
+html.dark .application-form .text-slate-500,
+html.dark .application-detail .text-slate-500,
+html.dark .application-detail .text-slate-600,
+html.dark .application-detail .text-slate-700,
+html.dark .application-delete-confirm .text-slate-600 { color: hsl(var(--muted-foreground)); }
+
+html.dark .application-form .text-teal-700,
+html.dark .application-detail .text-teal-700,
+html.dark .application-detail .text-teal-800 { color: hsl(var(--primary)); }
+
+html.dark .application-form .border-slate-100,
+html.dark .application-detail .border-slate-200,
+html.dark .application-detail .border-teal-100,
+html.dark .application-detail .border-teal-200 { border-color: hsl(var(--border)); }
+
+html.dark .application-detail .bg-slate-50,
+html.dark .application-detail .bg-teal-50\/50,
+html.dark .application-detail .bg-white { background: hsl(var(--secondary)); }
+
+html.dark .application-delete-confirm .border-rose-200 { border-color: hsl(var(--destructive) / 50%); }
+
 @keyframes application-stats-enter {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+.overview-welcome {
+  background: radial-gradient(ellipse at 85% 20%, hsl(var(--primary) / 12%), transparent 60%),
+    linear-gradient(120deg, hsl(var(--card)), hsl(var(--accent) / 65%));
+}
+
+.overview-enter { animation: application-stats-enter 550ms ease-out both; }
+.overview-note {
+  transform: rotate(var(--note-angle));
+  transition: transform 240ms ease, box-shadow 240ms ease;
+}
+.overview-card > div { transition: transform 240ms ease, border-color 240ms ease; }
+.overview-note:focus-visible { transform: translateY(-4px) rotate(0); }
+
+@media (hover: hover) and (pointer: fine) {
+  .overview-note:hover { transform: translateY(-4px) rotate(0); box-shadow: 0 12px 28px -18px hsl(var(--primary) / 50%); }
+  .overview-card:hover > div { transform: translateY(-3px); border-color: hsl(var(--primary) / 30%); }
 }
 
 @keyframes application-stats-grow {
@@ -64,4 +160,6 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .application-stats-enter, .application-stats-bar, .application-stats-fill { animation: none; }
+  .overview-enter { animation: none; }
+  .overview-note, .overview-card > div { transition: none; transform: none !important; }
 }

@@ -1,0 +1,29 @@
+.workspace {
+  display: flex;
+  flex-direction: column;
+  height: clamp(420px, calc(100dvh - 200px), 860px);
+  overflow: hidden;
+  border: 1px solid hsl(var(--border));
+  border-radius: 24px;
+  background: hsl(var(--card));
+  box-shadow: 0 18px 60px -38px hsl(var(--primary) / 35%);
+  font-size: 16px;
+}
+.workspace :is(input:not([type='checkbox']), textarea, select, button) { font-size: 1rem; }
+.workspace textarea { resize: none; }
+.scroll { min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.surface { background: radial-gradient(ellipse at 90% 0%, hsl(var(--primary) / 9%), transparent 60%), hsl(var(--card)); }
+.enter { animation: reveal 220ms ease-out both; }
+.choice { transition: background-color 180ms, border-color 180ms, box-shadow 180ms; }
+.choice:hover { box-shadow: 0 6px 18px -12px hsl(var(--primary) / 45%); }
+@keyframes reveal {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 767px) {
+  .workspace { height: clamp(480px, calc(100dvh - 200px), 780px); border-radius: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .enter { animation: none; }
+  .choice { transition: none; }
+}

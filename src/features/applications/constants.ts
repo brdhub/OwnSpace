@@ -1,5 +1,6 @@
 export const internshipTypes = ["daily", "summer", "autumn", "spring"] as const;
 export type InternshipType = (typeof internshipTypes)[number];
+export const defaultInternshipType: InternshipType = "autumn";
 
 export const companySizes = ["small", "medium", "large"] as const;
 export type CompanySize = (typeof companySizes)[number];

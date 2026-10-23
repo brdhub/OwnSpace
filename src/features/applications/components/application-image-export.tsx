@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { applicationStatusMeta, type ApplicationStatus } from "@/config/application-status";
+import { applicationStatusMeta, getApplicationStatusLabel, type ApplicationStatus } from "@/config/application-status";
 import type { Application } from "@/db/schema";
 import { internshipTypeMeta, type InternshipType } from "@/features/applications/constants";
 
@@ -24,6 +24,7 @@ type ExportRow = {
   company: string;
   role: string;
   status: ApplicationStatus;
+  interviewRound: number | null;
   internshipType: InternshipType;
   appliedDate: string;
 };
@@ -183,7 +184,7 @@ function generateImage(rows: ExportRow[], rangeLabel: string) {
     ctx.font = '600 16px "Microsoft YaHei", Arial, sans-serif';
     ctx.fillText(typeMeta.label, tableX + colCompany + colRole + 44, y + 39);
 
-    const statusLabel = applicationStatusMeta[row.status].label;
+    const statusLabel = getApplicationStatusLabel(row.status, row.interviewRound);
     const statusMeta = applicationStatusMeta[row.status];
     ctx.fillStyle = statusMeta.canvasBg;
     drawRoundRect(ctx, tableX + colCompany + colRole + colType + 20, y + 17, colStatus - 36, 32, 16);
@@ -225,6 +226,7 @@ export function ApplicationImageExport({ applications, onClose }: ApplicationIma
         company: application.company,
         role: application.role,
         status: application.status,
+        interviewRound: application.interviewRound,
         internshipType: application.internshipType,
         appliedDate: application.appliedDate,
       }));

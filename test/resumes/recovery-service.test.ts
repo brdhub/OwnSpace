@@ -74,3 +74,18 @@ test('cleanup reservation blocks recovery but remains retryable until deletion s
     assert.equal(f.service.get(run.id).checkpointsCleared,true);
   } finally {f.sqlite.close();}
 });
+
+test('agent call budget is persisted across failure and recovery and old mode keeps its limit', () => {
+  const f=setup();
+  try {
+    const run=f.service.start(f.task.id,f.task.inputRevision,'test',undefined,'agent');
+    assert.equal(run.promptVersion,'resume-agent-v1');
+    for(let index=0;index<7;index++)f.service.reserveCall(run);
+    f.service.fail(run,'network_error');
+    const resumed=f.service.resume(run.id);
+    f.service.reserveCall(resumed);
+    assert.throws(()=>f.service.reserveCall(resumed),/次数/);
+    assert.equal(f.service.get(run.id).callCount,8);
+    assert.throws(()=>f.service.reserveCall(run),/过期|占用/);
+  } finally {f.sqlite.close();}
+});

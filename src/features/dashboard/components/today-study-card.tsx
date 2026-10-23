@@ -11,7 +11,7 @@ type TodayStudyCardProps = {
 
 export function TodayStudyCard({ completed, categories }: TodayStudyCardProps) {
   return (
-    <Card>
+    <Card className="rounded-2xl">
       <CardHeader>
         <CardTitle>今日学习</CardTitle>
       </CardHeader>
@@ -21,14 +21,14 @@ export function TodayStudyCard({ completed, categories }: TodayStudyCardProps) {
             <GraduationCap className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-sm font-medium text-foreground">已完成 {completed}/4 个方向</div>
+            <div className="text-sm font-medium text-foreground">已完成 {completed}/{categories.length} 个方向</div>
             <div className="text-sm text-muted-foreground">按自己的节奏推进就好</div>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2">
           {categories.map((item) => (
             <div key={item.category} className="rounded-md border border-border bg-background px-2 py-1.5 text-xs">
-              <span className={item.completed ? "text-emerald-700" : "text-muted-foreground"}>{item.completed ? "已记录" : "未记录"}</span>
+              <span className={item.completed ? "text-primary" : "text-muted-foreground"}>{item.completed ? "已记录" : "未记录"}</span>
               <div className="mt-0.5 truncate text-foreground">{studyCategoryMeta[item.category].name}</div>
             </div>
           ))}

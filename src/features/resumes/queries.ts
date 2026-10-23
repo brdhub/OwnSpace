@@ -18,6 +18,9 @@ import type { ResumeAssetOption } from "@/features/resumes/types";
 import { jdRecommendationResponseSchema, type JdRecommendation } from "@/features/resumes/ai-schema";
 import { hasCompleteRecommendationCoverage } from "@/features/resumes/jd-selection";
 import { createTaskService } from './workflow/task-service';
+import { isRecoverableVersion, modelCallLimit } from './workflow/recovery-service';
+import { getCheckpointStore } from './workflow/checkpoint-store';
+import { AGENT_WORKFLOW_VERSION, traceSchema, type AgentTrace } from './agent/contracts';
 import {
   parseResumeEntryContent,
   parseResumeEntryTags,
@@ -43,7 +46,7 @@ export type JdTaskView = {
   id: number;
   inputRevision?: number;
   running?: boolean;
-  optimizationRun?: {id:string;status:string;stage:string;callCount:number;inputTokens:number|null;outputTokens:number|null;durationMs:number;fallbackCount:number;canResume:boolean;canClear:boolean;errorCode:string|null};
+  optimizationRun?: {id:string;status:string;stage:string;callCount:number;inputTokens:number|null;outputTokens:number|null;durationMs:number;fallbackCount:number;canResume:boolean;canClear:boolean;errorCode:string|null;maxCalls?:number;agentTrace?:AgentTrace};
   applicationId: number | null;
   targetRole: string;
   jdText: string;
@@ -117,6 +120,14 @@ export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {
     db.select().from(resumeOptimizationSuggestions).orderBy(asc(resumeOptimizationSuggestions.sortOrder)),
   ]);
 
+  const latestOptimizationRuns = new Map(jdTasks.map(task => [task.id, aiRuns.find(run => run.taskId === task.id && run.operation === 'optimization' && isRecoverableVersion(run.promptVersion))]));
+  const agentTraces = new Map<string, AgentTrace>();
+  await Promise.all([...latestOptimizationRuns.values()].map(async run => {
+    if (!run || run.promptVersion !== AGENT_WORKFLOW_VERSION || run.checkpointsCleared) return;
+    const checkpoint = await getCheckpointStore().getTuple({configurable: {thread_id: run.id}});
+    const trace = traceSchema.safeParse(checkpoint?.checkpoint.channel_values);
+    if (trace.success) agentTraces.set(run.id, trace.data);
+  }));
   const entryTitleById = new Map(entries.map((entry) => [entry.id, entry.title]));
   const merges = db.select().from(resumeEntryMerges).orderBy(desc(resumeEntryMerges.id)).all();
   const selectedEntryIdsByTask = new Map<number, number[]>();
@@ -203,9 +214,9 @@ export async function getResumeWorkspaceData(): Promise<ResumeWorkspaceData> {
         inputRevision: task.inputRevision,
         running: aiRuns.some(run => run.taskId === task.id && run.status === 'running'),
         optimizationRun: (()=>{
-          const run=aiRuns.find(run=>run.taskId===task.id&&run.operation==='optimization'&&run.promptVersion==='resume-recovery-v1');
+          const run=latestOptimizationRuns.get(task.id);
           if(!run)return undefined;
-          return {id:run.id,status:run.status,stage:run.stage,callCount:run.callCount,inputTokens:run.inputTokens,outputTokens:run.outputTokens,durationMs:run.durationMs,fallbackCount:run.fallbackCount,errorCode:run.errorCode,canResume:!run.checkpointsCleared&&run.inputRevision===task.inputRevision&&['waiting','failed','interrupted'].includes(run.status),canClear:!run.checkpointsCleared&&!['waiting','running'].includes(run.status)};
+          return {id:run.id,status:run.status,stage:run.stage,callCount:run.callCount,maxCalls:modelCallLimit(run.promptVersion),agentTrace:agentTraces.get(run.id),inputTokens:run.inputTokens,outputTokens:run.outputTokens,durationMs:run.durationMs,fallbackCount:run.fallbackCount,errorCode:run.errorCode,canResume:!run.checkpointsCleared&&run.inputRevision===task.inputRevision&&['waiting','failed','interrupted'].includes(run.status),canClear:!run.checkpointsCleared&&!['waiting','running'].includes(run.status)};
         })(),
         applicationId: task.applicationId,
         targetRole: task.targetRole,

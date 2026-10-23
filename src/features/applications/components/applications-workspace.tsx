@@ -17,6 +17,8 @@ import { matchMissingJobCategoriesAction, updateApplicationStatusAction } from "
 import { ApplicationForm } from "@/features/applications/components/application-form";
 import { ApplicationDetail } from "@/features/applications/components/application-detail";
 import { ApplicationQuickLinks } from "@/features/applications/components/application-quick-links";
+import { ApplicationQuickFields } from "@/features/applications/components/application-quick-fields";
+import { InterviewRoundSelect } from "./interview-round-select";
 import { ApplicationImageExport } from "@/features/applications/components/application-image-export";
 import { StatusBadge } from "@/features/applications/components/status-badge";
 import { applicationCities, jobCategories, jobCategoryLabels, companySizeMeta, internshipTypeMeta, internshipTypes } from "@/features/applications/constants";
@@ -41,8 +43,9 @@ type ApplicationsWorkspaceProps = {
   internshipType?: ApplicationInternshipTypeFilter;
 };
 
-function ApplicationStatusSelect({ id, status, error }: { id: number; status: Application["status"]; error?: string }) {
+function ApplicationStatusSelect({ id, status, interviewRound, error }: { id: number; status: Application["status"]; interviewRound: number | null; error?: string }) {
   const { pending } = useFormStatus();
+  const [round, setRound] = useState(interviewRound);
   const statusMeta = applicationStatusMeta[status];
 
   return (
@@ -66,6 +69,7 @@ function ApplicationStatusSelect({ id, status, error }: { id: number; status: Ap
           </option>
         ))}
       </Select>
+      {status === "laterInterview" ? <InterviewRoundSelect id={`round-${id}`} value={round} onChange={setRound} disabled={pending} autoSubmit /> : null}
       {error ? <p className="text-xs text-destructive" role="alert">{error}</p> : null}
     </div>
   );
@@ -107,20 +111,19 @@ function ApplicationCard({
   const hasJobDescription = Boolean(application.jobDescription.trim());
 
   return (
-    <Card className={cn("relative overflow-hidden border", statusMeta.cardClassName)}>
+    <Card className={cn("application-card relative overflow-hidden border", statusMeta.cardClassName)}>
       <div className={cn("absolute left-0 top-0 h-full", internshipMeta.barClassName, companySize.barWidthClassName)} aria-hidden="true" />
       <CardContent className="grid gap-4 p-4 pl-8 lg:grid-cols-[1.4fr_1fr_180px_100px] lg:items-center">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base font-semibold text-foreground">{application.company}</h2>
-            <StatusBadge status={application.status} />
+            <StatusBadge status={application.status} interviewRound={application.interviewRound} />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{application.role}</p>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-md border border-border bg-background px-2 py-1">{internshipMeta.label}</span>
             <span className="rounded-md border border-border bg-background px-2 py-1">{companySize.label}</span>
-            <span className="rounded-md border border-border bg-background px-2 py-1">{application.city ?? "城市未填写"}</span>
-            <span className="rounded-md border border-border bg-background px-2 py-1">{application.jobCategory ? jobCategoryLabels[application.jobCategory] : "岗位类型未填写"}</span>
+            <ApplicationQuickFields id={application.id} city={application.city} jobCategory={application.jobCategory} />
             {hasJobDescription ? <span className="rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-primary">已有 JD</span> : null}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
@@ -162,7 +165,7 @@ function ApplicationCard({
         </div>
         <form action={onStatusUpdate}>
           <input type="hidden" name="id" value={application.id} />
-          <ApplicationStatusSelect id={application.id} status={application.status} error={statusError} />
+          <ApplicationStatusSelect key={`${application.status}-${application.interviewRound}`} id={application.id} status={application.status} interviewRound={application.interviewRound} error={statusError} />
         </form>
         <div className="flex justify-start gap-2 lg:justify-end">
           <Button type="button" variant="outline" size="icon" onClick={() => onEdit(application)} aria-label="编辑投递记录">
@@ -205,9 +208,9 @@ export function ApplicationsWorkspace({
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
   const [optimisticApplications, updateOptimisticStatus] = useOptimistic(
     applications,
-    (currentApplications, update: { id: number; status: Application["status"] }) =>
+    (currentApplications, update: { id: number; status: Application["status"]; interviewRound: number | null }) =>
       currentApplications.map((application) =>
-        application.id === update.id ? { ...application, status: update.status } : application,
+        application.id === update.id ? { ...application, status: update.status, interviewRound: update.interviewRound } : application,
       ),
   );
 
@@ -298,7 +301,8 @@ export function ApplicationsWorkspace({
       delete next[id];
       return next;
     });
-    updateOptimisticStatus({ id, status: nextStatus });
+    const interviewRound = nextStatus === "laterInterview" && formData.get("interviewRound") ? Number(formData.get("interviewRound")) : null;
+    updateOptimisticStatus({ id, status: nextStatus, interviewRound });
 
     try {
       const result = await updateApplicationStatusAction(formData);

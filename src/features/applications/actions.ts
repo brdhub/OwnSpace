@@ -11,6 +11,7 @@ import {
   applicationFormSchema,
   applicationIdSchema,
   updateApplicationSchema,
+  updateApplicationQuickFieldSchema,
   updateApplicationStatusSchema,
 } from "@/features/applications/schemas";
 
@@ -67,6 +68,7 @@ export async function createApplicationAction(
 
   await db.insert(applications).values({
     ...parsed.data,
+    interviewRound: parsed.data.status === "laterInterview" ? parsed.data.interviewRound : null,
     resumeAssetId: resumeAsset.id,
     interviewTime: parsed.data.interviewTime ?? null,
     applicationUrl: parsed.data.applicationUrl ?? null,
@@ -103,6 +105,7 @@ export async function updateApplicationAction(
     .update(applications)
     .set({
       ...values,
+      interviewRound: values.status === "laterInterview" ? values.interviewRound : null,
       resumeAssetId: resumeAsset.id,
       interviewTime: values.interviewTime ?? null,
       applicationUrl: values.applicationUrl ?? null,
@@ -139,8 +142,23 @@ export async function updateApplicationStatusAction(formData: FormData): Promise
 
   await db
     .update(applications)
-    .set({ status: parsed.data.status, updatedAt: now() })
+    .set({ status: parsed.data.status, interviewRound: parsed.data.status === "laterInterview" ? parsed.data.interviewRound : null, updatedAt: now() })
     .where(eq(applications.id, parsed.data.id));
+
+  revalidatePath("/");
+  revalidatePath("/applications");
+  return { success: true };
+}
+
+export async function updateApplicationQuickFieldAction(input: unknown): Promise<UpdateApplicationStatusResult> {
+  const parsed = updateApplicationQuickFieldSchema.safeParse(input);
+  if (!parsed.success) return { success: false, message: "填写内容无效，请检查后重试。" };
+
+  const { id, field, value } = parsed.data;
+  const changes = await db.update(applications)
+    .set({ [field]: value || null, updatedAt: now() })
+    .where(eq(applications.id, id)).run();
+  if (!changes.changes) return { success: false, message: "投递记录不存在，请刷新后重试。" };
 
   revalidatePath("/");
   revalidatePath("/applications");
@@ -159,6 +177,7 @@ export async function addHistoricalStatusAction(input: unknown): Promise<Applica
     applicationId: application.id,
     fromStatus: null,
     toStatus: parsed.data.status,
+    interviewRound: parsed.data.status === "laterInterview" ? parsed.data.interviewRound : null,
     kind: "manual",
     occurredAt: parsed.data.date,
   });

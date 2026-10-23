@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { applicationStatusMeta, applicationStatuses } from "@/config/application-status";
 import type { Application } from "@/db/schema";
 import { createApplicationAction, deleteApplicationAction, type ApplicationActionState, updateApplicationAction } from "@/features/applications/actions";
-import { applicationCities, jobCategories, jobCategoryLabels, companySizeMeta, companySizes, internshipTypeMeta, internshipTypes } from "@/features/applications/constants";
+import { applicationCities, defaultInternshipType, jobCategories, jobCategoryLabels, companySizeMeta, companySizes, internshipTypeMeta, internshipTypes } from "@/features/applications/constants";
+import { InterviewRoundSelect } from "./interview-round-select";
 import { matchJobCategory } from "@/features/applications/job-category";
 import type { ResumeAssetOption } from "@/features/resumes/types";
 import { formatDate, toDateInputValue } from "@/lib/date";
@@ -68,6 +69,8 @@ function SubmitButton({ label }: { label: string }) {
 
 export function ApplicationForm({ application, initialValues, resumeAssets = [], onDone, modalTitle, modalSubtitle }: ApplicationFormProps) {
   const router = useRouter();
+  const [status, setStatus] = useState(application?.status ?? initialValues?.status ?? "applied");
+  const [interviewRound, setInterviewRound] = useState(application?.interviewRound ?? null);
   const initialCity = application ? application.city ?? "" : initialValues?.city ?? "深圳";
   const [cityChoice, setCityChoice] = useState<string>(!initialCity || applicationCities.some((city) => city === initialCity) ? initialCity : "other");
   const [customCity, setCustomCity] = useState(initialCity && !applicationCities.some((city) => city === initialCity) ? initialCity : "");
@@ -116,8 +119,8 @@ export function ApplicationForm({ application, initialValues, resumeAssets = [],
   }
 
   return (
-    <form action={formAction} className={modalTitle ? "flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-teal-900/10 bg-white shadow-2xl" : "space-y-5"}>
-      {modalTitle ? <div className="flex shrink-0 flex-col gap-4 border-b border-teal-100 bg-gradient-to-r from-teal-50 via-white to-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+    <form action={formAction} className={modalTitle ? "application-form flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-teal-900/10 bg-white shadow-2xl" : "space-y-5"}>
+      {modalTitle ? <div className="application-form-header flex shrink-0 flex-col gap-4 border-b border-teal-100 bg-gradient-to-r from-teal-50 via-white to-white px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <div className="min-w-0"><p className="text-xs font-semibold tracking-[0.2em] text-teal-700">APPLICATION RECORD</p><h2 id="application-form-title" className="mt-1 text-xl font-semibold text-slate-900 sm:text-2xl">{modalTitle}</h2><p className="mt-1 truncate text-sm text-slate-500">{modalSubtitle}</p></div>
         <div className="flex shrink-0 items-center gap-2 self-end sm:self-auto">
           {application ? <Button type="button" variant="outline" className="border-rose-300 text-rose-700 hover:bg-rose-50 hover:text-rose-800" onClick={() => setIsDeleteConfirmOpen(true)}><Trash2 className="h-4 w-4" />删除记录</Button> : null}
@@ -165,7 +168,7 @@ export function ApplicationForm({ application, initialValues, resumeAssets = [],
         </div>
         <div className="space-y-2">
           <Label htmlFor="internshipType">招聘类型</Label>
-          <Select id="internshipType" name="internshipType" defaultValue={application?.internshipType ?? initialValues?.internshipType ?? "daily"}>
+          <Select id="internshipType" name="internshipType" defaultValue={application?.internshipType ?? initialValues?.internshipType ?? defaultInternshipType}>
             {internshipTypes.map((type) => (
               <option key={type} value={type}>
                 {internshipTypeMeta[type].label}
@@ -195,7 +198,7 @@ export function ApplicationForm({ application, initialValues, resumeAssets = [],
         </div>
         <div className="space-y-2">
           <Label htmlFor="status">当前状态</Label>
-          <Select id="status" name="status" defaultValue={application?.status ?? initialValues?.status ?? "applied"}>
+          <Select id="status" name="status" value={status} onChange={event => { setStatus(event.target.value as typeof status); setInterviewRound(null); }}>
             {applicationStatuses.map((status) => (
               <option key={status} value={status}>
                 {applicationStatusMeta[status].label}
@@ -203,6 +206,8 @@ export function ApplicationForm({ application, initialValues, resumeAssets = [],
             ))}
           </Select>
           <FieldError errors={state.errors?.status} />
+          {status === "laterInterview" ? <InterviewRoundSelect id="interviewRound" value={interviewRound} onChange={setInterviewRound} /> : null}
+          <FieldError errors={state.errors?.interviewRound} />
         </div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -264,7 +269,7 @@ export function ApplicationForm({ application, initialValues, resumeAssets = [],
       </div> : null}
       </div>
       {isDeleteConfirmOpen && application && typeof document !== "undefined" ? createPortal(<div className="fixed inset-0 z-[60] grid place-items-center bg-slate-950/50 px-4 backdrop-blur-[2px]">
-        <div role="alertdialog" aria-modal="true" aria-labelledby="delete-application-title" aria-describedby="delete-application-description" className="w-full max-w-md rounded-2xl border border-rose-200 bg-white p-6 shadow-2xl">
+        <div role="alertdialog" aria-modal="true" aria-labelledby="delete-application-title" aria-describedby="delete-application-description" className="application-delete-confirm w-full max-w-md rounded-2xl border border-rose-200 bg-white p-6 shadow-2xl">
           <div className="flex h-11 w-11 items-center justify-center rounded-full bg-rose-100 text-rose-700"><Trash2 className="h-5 w-5" /></div>
           <h3 id="delete-application-title" className="mt-4 text-lg font-semibold text-slate-900">确认删除投递记录？</h3>
           <p id="delete-application-description" className="mt-2 text-sm leading-6 text-slate-600">将删除「{application.company} · {application.role}」及其状态轨迹。此操作无法撤销。</p>

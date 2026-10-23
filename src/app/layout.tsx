@@ -9,7 +9,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('ownspace-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}" }} />
+      </head>
       <body>
         <AppShell>{children}</AppShell>
       </body>

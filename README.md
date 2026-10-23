@@ -2,6 +2,8 @@
 
 （纯 AI Coding 玩具）本地优先的个人职业准备助手，面向后端、全栈与 AI Agent 实习准备场景。
 
+当前版本：**v4.0.0**（2026-10-24）。完整更新与升级说明见 [v4.0.0 更新记录](docs/releases/v4.0.0.md)。
+
 ## 环境要求
 
 需要 Node.js `20.16+`（20.x）或 `22.3+`。
@@ -30,14 +32,14 @@ npm run dev
 
 ## 升级已有安装（Windows）
 
-### 从 v2.3 或更早版本升级到 v3.7
+### 从 v2.3 或更早版本升级到 v4.0
 
 旧版本还没有内置升级器，需要最后进行一次离线升级：
 
-1. 解压 `OwnSpace-v3.7.0-offline-updater.zip`；
+1. 解压 `OwnSpace-v4.0.0-offline-updater.zip`；
 2. 双击其中的 `升级 OwnSpace.cmd`；
 3. 如果弹出目录选择器，选择朋友原来的 OwnSpace 文件夹；
-4. 升级器会先备份 `data`、`.env.local` 和旧程序，再迁移数据库、构建并启动 v3.7。
+4. 升级器会先备份 `data`、`.env.local` 和旧程序，再迁移数据库、构建并启动 v4.0。
 
 不要删除旧版目录或手动覆盖 `data`。升级成功后，原有投递、面经、日记、学习、规划、简历 PDF 与本机 DeepSeek 配置均保留。历史结构化简历条目仍受 v2.3 数据迁移规则影响，需要按 v2.3 的说明重新提取。
 
@@ -102,6 +104,14 @@ npm.cmd run dev
 npm.cmd run db:clear
 ```
 
+## v4.0 个人总览与简历 Agent
+
+首页改为个人总览，汇总投递、简历、日记、学习、规划与日历，支持轻量动效和记住本机选择的深浅主题。新增投递默认秋招，后续面试可选择第 2–10 面，轮次同步展示在轨迹和图片导出中；卡片支持快速编辑城市与岗位类型。
+
+简历优化工作台按准备、优化、审核分步展示，在固定区域内滚动内容。保留最多两次模型调用的快速优化，新增最多八次调用的 Agent 优化：模型制定计划、按需读取已选素材、追问真实贡献并提交待审建议。采用 LangGraph JS、DeepSeek Tool Calling、Zod 与 SQLite Checkpointer；参考 Deep Agents JS 的设计思路，未接入其 SDK。旧流程按原版本恢复，新流程独立保存执行状态。详见 [简历 Agent 实现说明](docs/resume-agent.md)。
+
+“简历 → GitHub 项目”新增按 JD 读取公开仓库、生成附代码依据的项目经历草稿，使用与简历素材优化独立的调用预算。升级前备份 `data` 与 `.env.local`，应用新增迁移 `0026_application_interview_round.sql` 和 `0027_github_resume_runs.sql`；已有记录不会被清空。
+
 ## v3.7 首页、投递轨迹与 AI 面试
 
 首页集中展示投递统计，可切换秋招、暑期实习、日常实习、春招和全部记录。投递页的筛选与投递网址按需展开，新增投递入口居中；状态变更自动写入轨迹，也可补录过去的日期与状态。秋招企业已移至“简历 → 秋招企业”，原地址保留筛选条件跳转。AI 工具页支持按投递 JD 与所选简历进行五题文字模拟、有限追问和本地复盘。升级前先备份 `data`；新增数据库迁移为 0024–0025。完整说明见 [v3.7.0 更新记录](https://github.com/brdhub/OwnSpace/blob/v3.7.0/docs/releases/v3.7.0.md)。
@@ -163,6 +173,14 @@ DEEPSEEK_TIMEOUT_MS=30000
 ```
 
 不要把密钥提交到 Git、写入数据库或粘贴到前端页面。任何曾在聊天、截图或可共享文件中暴露的密钥都应先在 DeepSeek 控制台轮换，再把新密钥写入 `.env.local`。
+
+## GitHub 项目经历解析
+
+“简历 → GitHub 项目”可将单个公开 GitHub 仓库整理成项目经历草稿。填写仓库主页、目标岗位及可选 JD，勾选数据发送说明后开始；Agent 制定计划、按需读取关键代码，并暂停询问个人贡献。补充或明确跳过后继续，草稿可编辑，核对代码依据后确认入库，再到 JD 匹配选用。
+
+沿用 `.env.local` 中的 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL`，模型需支持 Tool Calling。GitHub 使用匿名只读 API，不需要 GitHub Token；遇到额度不足可稍后手动继续。每次运行最多 10 次模型请求、20 次 GitHub 请求、10 个文件，单文件不超过 24 KB，代码合计不超过 80,000 字符；重试或恢复不会重置额度。超限需新建更小范围的任务。仅限公开仓库，不运行代码，过大的仓库或目录会明确拒绝。引用校验仅保证来源对应，不能证明个人贡献或模型表述一定真实。
+
+升级前备份 `data`，执行 `npm run db:migrate` 应用 `0027_github_resume_runs.sql`。任务及调用预算保存在 `github_resume_runs`，流程检查点保存在 `data/langgraph-checkpoints.db`；本地失败或进程重启后可手动恢复，执行锁到期约 3 分钟后可重试。新建分析和手动继续才会请求 GitHub/DeepSeek；页面刷新仅读取本地状态。设计与验证说明见 [GitHub 项目解析](docs/github-resume-agent.md)。
 
 ## v3.5 简历工作流
 

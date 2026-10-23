@@ -2,11 +2,12 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type ResumeTab = "vault" | "jd" | "opportunities";
+type ResumeTab = "vault" | "jd" | "opportunities" | "github";
 
 const tabs: { key: ResumeTab; label: string; href: string }[] = [
   { key: "vault", label: "简历仓库", href: "/resumes" },
   { key: "jd", label: "JD 匹配", href: "/resumes?tab=jd" },
+  { key: "github", label: "GitHub 项目", href: "/resumes/github" },
   { key: "opportunities", label: "秋招企业", href: "/resumes/opportunities" },
 ];
 

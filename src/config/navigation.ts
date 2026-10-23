@@ -1,7 +1,7 @@
 import { Bot, BriefcaseBusiness, Building2, CalendarCheck, FileText, GraduationCap, LayoutDashboard, Route } from "lucide-react";
 
 export const navigationItems = [
-  { label: "首页", href: "/", icon: LayoutDashboard },
+  { label: "个人总览", href: "/", icon: LayoutDashboard },
   { label: "投递记录", href: "/applications", icon: BriefcaseBusiness },
   { label: "简历", href: "/resumes", icon: FileText },
   { label: "实习记录", href: "/internships", icon: Building2 },

@@ -14,6 +14,7 @@ import { InterviewCalendar } from "@/features/dashboard/components/interview-cal
 import { TodayJournalCard } from "@/features/dashboard/components/today-journal-card";
 import { TodayStudyCard } from "@/features/dashboard/components/today-study-card";
 import { PlanningSummaryCard } from "@/features/dashboard/components/planning-summary-card";
+import { PersonalOverview } from "@/features/dashboard/components/personal-overview";
 import type { CalendarActivityDay, CalendarInterviewEvent } from "@/features/dashboard/queries";
 import type { StudyCategory } from "@/features/study/constants";
 import type { ResumeAssetOption } from "@/features/resumes/types";
@@ -60,14 +61,16 @@ export function DashboardView({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-border bg-card p-5">
+      <PersonalOverview today={today} applicationCount={applicationStatisticsRows.length} resumeCount={resumeAssets.length} recordedDays={calendarActivityDays.filter((day) => day.date <= today).length} />
+
+      <section className="overview-enter rounded-2xl border border-border bg-card p-4" style={{ animationDelay: "60ms" }} aria-label="快捷操作">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
             <Button type="button" onClick={() => setShowCreateApplication(true)}>
               <Plus className="h-4 w-4" />
               新增投递记录
             </Button>
-            <Button asChild type="button" className="bg-blue-100 text-blue-800 hover:bg-blue-200">
+            <Button asChild type="button" variant="outline">
               <Link href="/applications">查看全部投递</Link>
             </Button>
           </div>
@@ -84,13 +87,25 @@ export function DashboardView({
         </div>
       </section>
 
-      <ApplicationAchievement rows={applicationStatisticsRows} today={today} />
+      <section aria-labelledby="overview-today-title" className="space-y-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="overview-today-title" className="text-base font-semibold">今天与接下来</h2>
+          <p className="text-xs text-muted-foreground">学习、生活与计划，都在这里</p>
+        </div>
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="grid min-w-0 gap-5 sm:grid-cols-2">
+            <div className="overview-enter overview-card" style={{ animationDelay: "120ms" }}><TodayStudyCard completed={studyProgress.completed} categories={studyProgress.categories} /></div>
+            <div className="overview-enter overview-card sm:pt-6" style={{ animationDelay: "180ms" }}><TodayJournalCard hasEntry={hasJournalEntry} today={today} /></div>
+            <div className="overview-enter sm:col-span-2" style={{ animationDelay: "240ms" }}><PlanningSummaryCard {...planningSummary} /></div>
+          </div>
+          <div id="overview-calendar" className="overview-enter scroll-mt-6" style={{ animationDelay: "300ms" }}>
+            <InterviewCalendar events={calendarEvents} activityDays={calendarActivityDays} />
+          </div>
+        </div>
+      </section>
 
-      <div className="grid gap-5 lg:grid-cols-2 2xl:grid-cols-4">
-        <TodayJournalCard hasEntry={hasJournalEntry} today={today} />
-        <TodayStudyCard completed={studyProgress.completed} categories={studyProgress.categories} />
-        <PlanningSummaryCard {...planningSummary} />
-        <InterviewCalendar events={calendarEvents} activityDays={calendarActivityDays} />
+      <div className="border-t border-border pt-6">
+        <ApplicationAchievement rows={applicationStatisticsRows} today={today} />
       </div>
 
       {showCreateApplication ? (

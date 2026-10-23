@@ -7,9 +7,12 @@ import { assertPromptBudget, validateOptimizationSuggestions } from './optimizat
 import { ModelCallBudgetError, RESUME_WORKFLOW_VERSION } from './resumable-graph';
 import type { OptimizationPromptInput } from '../prompts';
 import type { EntryOptimizationSuggestion } from '../ai-schema';
+import { AGENT_WORKFLOW_VERSION, MAX_AGENT_CALLS } from '../agent/contracts';
 
 export const RECOVERY_VERSION = RESUME_WORKFLOW_VERSION;
 export const MAX_MODEL_CALLS = 2;
+export const isRecoverableVersion = (version: string) => [RECOVERY_VERSION, AGENT_WORKFLOW_VERSION].includes(version);
+export const modelCallLimit = (version: string) => version === AGENT_WORKFLOW_VERSION ? MAX_AGENT_CALLS : MAX_MODEL_CALLS;
 const {resumeAiRuns: runs, resumeOptimizationSuggestions: suggestions} = schema;
 export type RecoveryRun = schema.ResumeAiRun;
 
@@ -27,7 +30,7 @@ export function createRecoveryService(database: BetterSQLite3Database<typeof sch
     if(!current.taskId||tasks.getTask(current.taskId).inputRevision!==current.inputRevision) throw new Error('岗位或选材已更新，本次处理已过期。');
     return current;
   }
-  function start(taskId:number, revision:number, model:string, targetMaterialId?:number) {
+  function start(taskId:number, revision:number, model:string, targetMaterialId?:number, mode:'quick'|'agent'='quick') {
     return database.transaction(()=>{
       const task=tasks.getTask(taskId);
       if(task.inputRevision!==revision) throw new Error('任务已更新，请刷新。');
@@ -38,7 +41,7 @@ export function createRecoveryService(database: BetterSQLite3Database<typeof sch
       assertPromptBudget(input);
       const run=tasks.beginRun(taskId,revision,'optimization',input,model);
       database.update(runs).set({status:'superseded',finishedAt:now()}).where(and(eq(runs.taskId,taskId),eq(runs.operation,'optimization'),ne(runs.id,run.id),inArray(runs.status,['waiting','failed','interrupted']))).run();
-      database.update(runs).set({promptVersion:RECOVERY_VERSION,inputJson:JSON.stringify(input),targetMaterialId:targetMaterialId??null,executionId:randomUUID(),heartbeatAt:now()}).where(eq(runs.id,run.id)).run();
+      database.update(runs).set({promptVersion:mode==='agent'?AGENT_WORKFLOW_VERSION:RECOVERY_VERSION,inputJson:JSON.stringify(input),targetMaterialId:targetMaterialId??null,executionId:randomUUID(),heartbeatAt:now()}).where(eq(runs.id,run.id)).run();
       return get(run.id);
     });
   }
@@ -46,7 +49,7 @@ export function createRecoveryService(database: BetterSQLite3Database<typeof sch
     return database.transaction(()=>{
       tasks.expireRuns();
       const run=get(id);
-      if(run.promptVersion!==RECOVERY_VERSION||run.checkpointsCleared||!run.inputJson) throw new Error('此记录没有可恢复的流程，请重新优化。');
+      if(!isRecoverableVersion(run.promptVersion)||run.checkpointsCleared||!run.inputJson) throw new Error('此记录没有可恢复的流程，请重新优化。');
       if(!['waiting','failed','interrupted'].includes(run.status)) throw new Error('流程已完成、正在运行或已被替代。');
       if(!run.taskId||tasks.getTask(run.taskId).inputRevision!==run.inputRevision) throw new Error('任务已更新，旧流程不可恢复。');
       if(database.select().from(runs).where(and(eq(runs.taskId,run.taskId),eq(runs.status,'running'))).get()) throw new Error('此任务已有请求正在进行。');
@@ -61,7 +64,7 @@ export function createRecoveryService(database: BetterSQLite3Database<typeof sch
   function reserveCall(run:RecoveryRun) {
     return database.transaction(()=>{
       const current=guard(run);
-      if(current.callCount>=MAX_MODEL_CALLS) throw new ModelCallBudgetError();
+      if(current.callCount>=modelCallLimit(current.promptVersion)) throw new ModelCallBudgetError();
       database.update(runs).set({callCount:current.callCount+1,heartbeatAt:now()}).where(eq(runs.id,run.id)).run();
     });
   }

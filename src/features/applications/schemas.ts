@@ -1,7 +1,12 @@
 ﻿import { z } from "zod";
 import { applicationStatuses } from "@/config/application-status";
-import { companySizes, internshipTypes, jobCategories } from "@/features/applications/constants";
+import { companySizes, defaultInternshipType, internshipTypes, jobCategories } from "@/features/applications/constants";
 import { toDateInputValue } from "@/lib/date";
+
+const interviewRoundSchema = z.preprocess(
+  value => value === "" || value === undefined || value === null ? null : value,
+  z.coerce.number().int().min(2, "后续面试从第 2 面开始").max(10, "最多选择第 10 面").nullable(),
+);
 
 export const applicationFormSchema = z.object({
   opportunityId: z.preprocess(
@@ -18,7 +23,8 @@ export const applicationFormSchema = z.object({
   role: z.string().trim().min(1, "请输入岗位名称").max(100, "岗位名称不要超过 100 个字符"),
   source: z.string().trim().min(1, "请输入投递渠道").max(80, "投递渠道不要超过 80 个字符"),
   status: z.enum(applicationStatuses, { required_error: "请选择当前状态" }),
-  internshipType: z.enum(internshipTypes, { required_error: "请选择实习类型" }).default("daily"),
+  internshipType: z.enum(internshipTypes, { required_error: "请选择招聘类型" }).default(defaultInternshipType),
+  interviewRound: interviewRoundSchema,
   companySize: z.enum(companySizes, { required_error: "请选择厂型" }).default("medium"),
   appliedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "请选择有效的投递日期"),
   interviewTime: z.preprocess(
@@ -47,11 +53,24 @@ export const updateApplicationSchema = applicationIdSchema.merge(applicationForm
 export const updateApplicationStatusSchema = applicationIdSchema.merge(
   z.object({
     status: z.enum(applicationStatuses, { required_error: "请选择当前状态" }),
+    interviewRound: interviewRoundSchema,
   }),
 );
 
+export const updateApplicationQuickFieldSchema = z.discriminatedUnion("field", [
+  applicationIdSchema.extend({
+    field: z.literal("city"),
+    value: z.string().trim().max(40, "城市不要超过 40 个字符"),
+  }).strict(),
+  applicationIdSchema.extend({
+    field: z.literal("jobCategory"),
+    value: z.union([z.enum(jobCategories), z.literal("")]),
+  }).strict(),
+]);
+
 export const addHistoricalStatusSchema = applicationIdSchema.merge(z.object({
   status: z.enum(applicationStatuses, { required_error: "请选择状态" }),
+  interviewRound: interviewRoundSchema,
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "请选择有效日期")
     .refine((value) => !Number.isNaN(Date.parse(`${value}T00:00:00Z`)) && new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) === value, "请选择有效日期")
     .refine((value) => value <= toDateInputValue(), "不能补录未来日期"),

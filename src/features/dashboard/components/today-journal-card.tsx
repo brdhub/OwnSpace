@@ -10,9 +10,9 @@ type TodayJournalCardProps = {
 
 export function TodayJournalCard({ hasEntry, today }: TodayJournalCardProps) {
   return (
-    <Card>
+    <Card className="rounded-2xl border-primary/15 bg-accent/30">
       <CardHeader>
-        <CardTitle>今日记录</CardTitle>
+        <CardTitle>给今天留一页</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-3">
@@ -24,6 +24,7 @@ export function TodayJournalCard({ hasEntry, today }: TodayJournalCardProps) {
             <div className="text-sm text-muted-foreground">{today}</div>
           </div>
         </div>
+        <p className="text-sm leading-6 text-muted-foreground">{hasEntry ? "今天的感受与收获，已经有了一个落点。想到什么，随时回来补充。" : "一个想法、一点收获，或只是此刻的心情，都值得记下来。"}</p>
         <Button asChild variant={hasEntry ? "outline" : "default"}>
           <Link href={`/internships?view=journal&date=${today}`}>{hasEntry ? "继续编辑" : "开始记录今天"}</Link>
         </Button>

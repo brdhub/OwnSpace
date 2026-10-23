@@ -10,6 +10,11 @@ export const applicationStatuses = [
 
 export type ApplicationStatus = (typeof applicationStatuses)[number];
 
+export const laterInterviewRounds = [2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+export function getApplicationStatusLabel(status: ApplicationStatus, interviewRound?: number | null) {
+  return status === "laterInterview" && interviewRound ? `第 ${interviewRound} 面` : applicationStatusMeta[status].label;
+}
+
 type ApplicationStatusMeta = {
   label: string;
   className: string;
